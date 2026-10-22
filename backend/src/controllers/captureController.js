@@ -52,8 +52,9 @@ const handlePhotoUpload = async (req, res) => {
         success: true,
         identified: false,
         isSafe: true,
-        message: "Hmm, I couldn't quite see what that was. Try holding it steady or moving to better light!",
+        message: data.confidence_note || "Hmm, I couldn't quite see what that was. Try holding it steady or moving to better light!",
         confidenceNote: data.confidence_note,
+        grounding: data.grounding,
       });
     }
 

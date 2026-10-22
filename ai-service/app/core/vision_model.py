@@ -143,7 +143,28 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "source_url": None,
                 "extract": None,
             }
-        ref_text = grounding_info.get("extract") or f"{object_name} is an everyday physical item."
+
+        if not grounding_info.get("grounded") or not grounding_info.get("extract"):
+            return {
+                "success": True,
+                "identified": False,
+                "is_safe": True,
+                "safety_flag_reason": None,
+                "object_name": None,
+                "kid_summary": None,
+                "fun_fact": None,
+                "action_prompt": None,
+                "readability": None,
+                "grounding": {
+                    "grounded": False,
+                    "source_title": None,
+                    "source_url": None
+                },
+                "confidence_note": "I could not find enough trusted information about this item yet.",
+                "error": None
+            }
+
+        ref_text = grounding_info["extract"]
 
         # Step D: Synthesize grounded explanation with fast text model
         prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
