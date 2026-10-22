@@ -5,6 +5,7 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from app.services.grounding import fetch_grounding_text
+from app.services.content_filter import inspect_safety_completion
 
 load_dotenv()
 
@@ -66,7 +67,7 @@ def evaluate_readability(text: str) -> dict:
 
 def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
     try:
-        # Step A: Identify object and verify image safety
+        # Step A: Identify object and verify initial visual safety
         detection_res = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[
@@ -85,7 +86,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "success": True,
                 "identified": False,
                 "is_safe": False,
-                "safety_flag_reason": parsed_det.get("safety_flag_reason"),
+                "safety_flag_reason": parsed_det.get("safety_flag_reason", "Object flagged as unsafe for children."),
                 "object_name": None,
                 "kid_summary": None,
                 "fun_fact": None,
@@ -134,8 +135,32 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
         )
         parsed_synth = json.loads(synthesis_res.text.strip())
 
-        # Step D: Readability assessment
-        combined_text = f"{parsed_synth.get('kid_summary', '')} {parsed_synth.get('fun_fact', '')}"
+        kid_summary = parsed_synth.get("kid_summary", "")
+        fun_fact = parsed_synth.get("fun_fact", "")
+        action_prompt = parsed_synth.get("action_prompt", "")
+
+        # Step D: Independent Post-Generation Content Filter
+        texts_to_check = [kid_summary, fun_fact, action_prompt]
+        is_safe, violations = inspect_safety_completion(texts_to_check)
+
+        if not is_safe:
+            return {
+                "success": True,
+                "identified": False,
+                "is_safe": False,
+                "safety_flag_reason": "; ".join(violations),
+                "object_name": None,
+                "kid_summary": None,
+                "fun_fact": None,
+                "action_prompt": None,
+                "readability": None,
+                "grounding": None,
+                "confidence_note": "Output blocked by content safety gate.",
+                "error": None
+            }
+
+        # Step E: Readability assessment
+        combined_text = f"{kid_summary} {fun_fact}"
         readability_metrics = evaluate_readability(combined_text)
 
         return {
@@ -144,14 +169,14 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             "is_safe": True,
             "safety_flag_reason": None,
             "object_name": object_name,
-            "kid_summary": parsed_synth.get("kid_summary"),
-            "fun_fact": parsed_synth.get("fun_fact"),
-            "action_prompt": parsed_synth.get("action_prompt"),
+            "kid_summary": kid_summary,
+            "fun_fact": fun_fact,
+            "action_prompt": action_prompt,
             "readability": readability_metrics,
             "grounding": {
-                "grounded": grounding_info["grounded"],
-                "source_title": grounding_info["source_title"],
-                "source_url": grounding_info["source_url"]
+                "grounded": grounding_info.get("grounded", False),
+                "source_title": grounding_info.get("source_title"),
+                "source_url": grounding_info.get("source_url")
             },
             "confidence_note": None,
             "error": None
