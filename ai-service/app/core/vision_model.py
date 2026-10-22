@@ -1,29 +1,37 @@
 import os
 import json
+import base64
+import logging
 import textstat
-from google import genai
-from google.genai import types
+from groq import Groq
 from dotenv import load_dotenv
 from app.services.grounding import fetch_grounding_text
 from app.services.content_filter import inspect_safety_completion
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+logger = logging.getLogger(__name__)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# Use a current production vision model. The former Llama 3.2 preview model
+# is no longer available through Groq.
+VISION_MODEL = "qwen/qwen3.8-27b"
 
 OBJECT_DETECTION_PROMPT = """Analyze this image. Perform two steps:
 1. SAFETY CHECK:
    If the image depicts weapons, real blades, violence, adult content, illicit items, or dangerous chemicals, mark "is_safe" as false and give a brief reason in "safety_flag_reason".
+
 2. IDENTIFICATION:
-   Identify the primary everyday object, animal, plant, vehicle, or structure. Return a clear, standard English search term (e.g., "Smartphone", "Honeybee", "Apple", "Guitar").
-   If blurry, dark, blank, or unrecognizable, set "identified" to false.
+   Identify the primary everyday item, toy, book, tool, food, animal, plant, vehicle, or structure.
+   If a person or hand is holding an item, focus on the item being held (e.g., "Book", "Toy", "Apple", "Smartphone", "Eyeglasses").
+   Do NOT identify the person. If only a person/face is visible with no clear everyday item, or if the image is blank or completely blurry, set "identified" to false.
 
 Return ONLY a JSON object:
 {
   "is_safe": true,
   "safety_flag_reason": null,
   "identified": true,
-  "search_term": "Smartphone",
+  "search_term": "Book",
   "confidence_note": null
 }
 """
@@ -54,6 +62,7 @@ RULES:
 Return ONLY valid JSON.
 """
 
+
 def evaluate_readability(text: str) -> dict:
     if not text:
         return {"grade_level": 0.0, "reading_ease": 100.0, "age_appropriate": True}
@@ -65,21 +74,29 @@ def evaluate_readability(text: str) -> dict:
         "age_appropriate": grade <= 4.0
     }
 
+
 def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
     try:
-        # Step A: Identify object and verify initial visual safety
-        detection_res = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-                OBJECT_DETECTION_PROMPT
+        # Step A: Base64 encode image for Groq Vision
+        base64_image = base64.b64encode(image_bytes).decode("utf-8")
+        image_data_url = f"data:{mime_type};base64,{base64_image}"
+
+        # Step B: Identify object via Vision model
+        detection_completion = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": OBJECT_DETECTION_PROMPT},
+                        {"type": "image_url", "image_url": {"url": image_data_url}}
+                    ]
+                }
             ],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1
-            )
+            response_format={"type": "json_object"},
+            temperature=0.1
         )
-        parsed_det = json.loads(detection_res.text.strip())
+        parsed_det = json.loads(detection_completion.choices[0].message.content.strip())
 
         if not parsed_det.get("is_safe", True):
             return {
@@ -115,31 +132,40 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
 
         object_name = parsed_det["search_term"]
 
-        # Step B: Fetch verified external knowledge
-        grounding_info = fetch_grounding_text(object_name)
-        ref_text = grounding_info["extract"] or f"{object_name} is an everyday physical item."
+        # Step C: Fetch verified Wikipedia reference text
+        try:
+            grounding_info = fetch_grounding_text(object_name)
+        except Exception:
+            logger.exception("Grounding lookup failed for object %r", object_name)
+            grounding_info = {
+                "grounded": False,
+                "source_title": None,
+                "source_url": None,
+                "extract": None,
+            }
+        ref_text = grounding_info.get("extract") or f"{object_name} is an everyday physical item."
 
-        # Step C: Synthesize child explanation strictly grounded in reference text
+        # Step D: Synthesize grounded explanation with fast text model
         prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
             object_name=object_name,
             reference_text=ref_text
         )
 
-        synthesis_res = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.2
-            )
+        synthesis_completion = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2
         )
-        parsed_synth = json.loads(synthesis_res.text.strip())
+        parsed_synth = json.loads(synthesis_completion.choices[0].message.content.strip())
 
         kid_summary = parsed_synth.get("kid_summary", "")
         fun_fact = parsed_synth.get("fun_fact", "")
         action_prompt = parsed_synth.get("action_prompt", "")
 
-        # Step D: Independent Post-Generation Content Filter
+        # Step E: Post-generation content filter check
         texts_to_check = [kid_summary, fun_fact, action_prompt]
         is_safe, violations = inspect_safety_completion(texts_to_check)
 
@@ -159,7 +185,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "error": None
             }
 
-        # Step E: Readability assessment
+        # Step F: Readability assessment
         combined_text = f"{kid_summary} {fun_fact}"
         readability_metrics = evaluate_readability(combined_text)
 
@@ -183,6 +209,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
         }
 
     except Exception as e:
+        logger.exception("Vision analysis failed")
         return {
             "success": False,
             "identified": False,
