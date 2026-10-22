@@ -6,6 +6,11 @@ class AgeMetrics(BaseModel):
     reading_ease: float
     age_appropriate: bool
 
+class GroundingSource(BaseModel):
+    grounded: bool
+    source_title: Optional[str] = None
+    source_url: Optional[str] = None
+
 class VisionRecognitionResponse(BaseModel):
     success: bool
     identified: bool
@@ -16,5 +21,6 @@ class VisionRecognitionResponse(BaseModel):
     fun_fact: Optional[str] = None
     action_prompt: Optional[str] = None
     readability: Optional[AgeMetrics] = None
+    grounding: Optional[GroundingSource] = None
     confidence_note: Optional[str] = None
     error: Optional[str] = None

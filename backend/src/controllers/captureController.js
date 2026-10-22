@@ -58,6 +58,7 @@ const handlePhotoUpload = async (req, res) => {
       funFact: data.fun_fact,
       actionPrompt: data.action_prompt,
       readability: data.readability,
+      grounding: data.grounding,
     });
 
   } catch (error) {

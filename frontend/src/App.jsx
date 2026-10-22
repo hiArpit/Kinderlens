@@ -75,12 +75,20 @@ export default function App() {
                 </div>
               )}
 
-              {/* Reading metrics indicator */}
-              {result.readability && (
-                <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#9ca3af' }}>
-                  Reading Level: Grade {result.readability.grade_level}
-                </div>
-              )}
+              {/* Grounding Source & Reading Level Footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                {result.grounding?.grounded ? (
+                  <span style={{ color: '#059669', fontWeight: 600 }}>
+                    📖 Verified via {result.grounding.source_title}
+                  </span>
+                ) : (
+                  <span>🔍 Direct observation</span>
+                )}
+
+                {result.readability && (
+                  <span>Reading: Grade {result.readability.grade_level}</span>
+                )}
+              </div>
             </>
           ) : (
             <div style={{ textAlign: 'center' }}>

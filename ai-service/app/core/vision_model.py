@@ -4,102 +4,99 @@ import textstat
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+from app.services.grounding import fetch_grounding_text
 
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-CHILD_CALIBRATION_PROMPT = """You are the vision and education module for KinderLens, an app for children ages 6 to 8 (1st to 3rd grade).
+OBJECT_DETECTION_PROMPT = """Analyze this image. Perform two steps:
+1. SAFETY CHECK:
+   If the image depicts weapons, real blades, violence, adult content, illicit items, or dangerous chemicals, mark "is_safe" as false and give a brief reason in "safety_flag_reason".
+2. IDENTIFICATION:
+   Identify the primary everyday object, animal, plant, vehicle, or structure. Return a clear, standard English search term (e.g., "Smartphone", "Honeybee", "Apple", "Guitar").
+   If blurry, dark, blank, or unrecognizable, set "identified" to false.
 
-First, perform a safety check:
-- If the image contains weapons, real blades, violence, adult content, illicit items, or dangerous household chemicals/hazards, mark "is_safe" as false and set "safety_flag_reason" to a gentle note for parents (e.g. "This object is for adults only or poses safety concerns").
+Return ONLY a JSON object:
+{
+  "is_safe": true,
+  "safety_flag_reason": null,
+  "identified": true,
+  "search_term": "Smartphone",
+  "confidence_note": null
+}
+"""
 
-If the image is safe, identify the central object and formulate an explanation following these rules:
+CHILD_GROUNDED_SYNTHESIS_PROMPT = """You are the educational text calibrator for KinderLens, an app for children ages 6 to 8.
+
+You must explain the object "{object_name}" using ONLY the facts present in the verified reference text below. Do NOT introduce external trivia, invented facts, or speculation.
+
+VERIFIED REFERENCE TEXT:
+{reference_text}
+
+RULES:
 1. AGE CALIBRATION (Ages 6-8):
-   - Use short sentences (6 to 10 words each).
-   - Use simple, familiar words. Avoid technical jargon.
-   - Use a physical analogy that a child understands.
-2. SAFETY GUARDRAIL - STRICT:
-   - DO NOT roleplay or assume a human or character identity.
-   - Never say "I", "me", "my", "I love", or "I think".
-   - Never ask personal questions or encourage open chatting.
+   - Short sentences (6 to 10 words each).
+   - High-frequency, elementary words.
+   - Grounded physical analogy that matches the reference text.
+2. STRICT SAFETY:
+   - Zero persona or roleplay: Never say "I", "me", "my", or "friend".
+   - No open conversation or personal questions.
 3. OUTPUT FORMAT:
-   Return a single JSON object with these exact keys:
-   {
-     "is_safe": true,
-     "safety_flag_reason": null,
-     "identified": true,
-     "object_name": "Standard object name",
-     "kid_summary": "2 short, easy sentences explaining what this is and what it does.",
-     "fun_fact": "1 surprising, simple fact about it.",
-     "action_prompt": "1 safe observation activity for the child (e.g. 'Can you spot what color it has?' or 'Count how many buttons it has!').",
-     "confidence_note": null
-   }
+   Return a JSON object:
+   {{
+     "kid_summary": "2 short, clear sentences explaining what this is and what it does based on the text.",
+     "fun_fact": "1 simple, verifiable fact taken directly from the text.",
+     "action_prompt": "1 safe physical observation activity (e.g., look for a shape, count buttons, or notice a color)."
+   }}
 
-If the image is unidentifiable, blurry, or blank:
-   {
-     "is_safe": true,
-     "safety_flag_reason": null,
-     "identified": false,
-     "object_name": null,
-     "kid_summary": null,
-     "fun_fact": null,
-     "action_prompt": null,
-     "confidence_note": "A clear, helpful note explaining why it could not be identified."
-   }
-
-Return ONLY valid raw JSON without markdown formatting or code blocks.
+Return ONLY valid JSON.
 """
 
 def evaluate_readability(text: str) -> dict:
     if not text:
         return {"grade_level": 0.0, "reading_ease": 100.0, "age_appropriate": True}
-    
     grade = textstat.flesch_kincaid_grade(text)
     ease = textstat.flesch_reading_ease(text)
-    
-    # Target reading range for ages 6-8 is grade 1.0 to 3.8
-    is_appropriate = grade <= 4.0
-    
     return {
         "grade_level": round(grade, 1),
         "reading_ease": round(ease, 1),
-        "age_appropriate": is_appropriate
+        "age_appropriate": grade <= 4.0
     }
 
 def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
     try:
-        response = client.models.generate_content(
+        # Step A: Identify object and verify image safety
+        detection_res = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[
                 types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-                CHILD_CALIBRATION_PROMPT
+                OBJECT_DETECTION_PROMPT
             ],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.2
+                temperature=0.1
             )
         )
+        parsed_det = json.loads(detection_res.text.strip())
 
-        raw_text = response.text.strip()
-        parsed = json.loads(raw_text)
-
-        if not parsed.get("is_safe", True):
+        if not parsed_det.get("is_safe", True):
             return {
                 "success": True,
                 "identified": False,
                 "is_safe": False,
-                "safety_flag_reason": parsed.get("safety_flag_reason"),
+                "safety_flag_reason": parsed_det.get("safety_flag_reason"),
                 "object_name": None,
                 "kid_summary": None,
                 "fun_fact": None,
                 "action_prompt": None,
                 "readability": None,
+                "grounding": None,
                 "confidence_note": None,
                 "error": None
             }
 
-        if not parsed.get("identified", False):
+        if not parsed_det.get("identified", False) or not parsed_det.get("search_term"):
             return {
                 "success": True,
                 "identified": False,
@@ -110,12 +107,35 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "fun_fact": None,
                 "action_prompt": None,
                 "readability": None,
-                "confidence_note": parsed.get("confidence_note"),
+                "grounding": None,
+                "confidence_note": parsed_det.get("confidence_note", "Could not clearly identify this item."),
                 "error": None
             }
 
-        # Calculate readability metrics over the generated child text
-        combined_text = f"{parsed.get('kid_summary', '')} {parsed.get('fun_fact', '')}"
+        object_name = parsed_det["search_term"]
+
+        # Step B: Fetch verified external knowledge
+        grounding_info = fetch_grounding_text(object_name)
+        ref_text = grounding_info["extract"] or f"{object_name} is an everyday physical item."
+
+        # Step C: Synthesize child explanation strictly grounded in reference text
+        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
+            object_name=object_name,
+            reference_text=ref_text
+        )
+
+        synthesis_res = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.2
+            )
+        )
+        parsed_synth = json.loads(synthesis_res.text.strip())
+
+        # Step D: Readability assessment
+        combined_text = f"{parsed_synth.get('kid_summary', '')} {parsed_synth.get('fun_fact', '')}"
         readability_metrics = evaluate_readability(combined_text)
 
         return {
@@ -123,12 +143,17 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             "identified": True,
             "is_safe": True,
             "safety_flag_reason": None,
-            "object_name": parsed.get("object_name"),
-            "kid_summary": parsed.get("kid_summary"),
-            "fun_fact": parsed.get("fun_fact"),
-            "action_prompt": parsed.get("action_prompt"),
+            "object_name": object_name,
+            "kid_summary": parsed_synth.get("kid_summary"),
+            "fun_fact": parsed_synth.get("fun_fact"),
+            "action_prompt": parsed_synth.get("action_prompt"),
             "readability": readability_metrics,
-            "confidence_note": parsed.get("confidence_note"),
+            "grounding": {
+                "grounded": grounding_info["grounded"],
+                "source_title": grounding_info["source_title"],
+                "source_url": grounding_info["source_url"]
+            },
+            "confidence_note": None,
             "error": None
         }
 
@@ -143,6 +168,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             "fun_fact": None,
             "action_prompt": None,
             "readability": None,
+            "grounding": None,
             "confidence_note": None,
             "error": str(e)
         }
