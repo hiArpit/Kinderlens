@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import PhotoCapture from './components/Capture/PhotoCapture';
+import ParentDashboard from './components/Parent/ParentDashboard';
 
 export default function App() {
   const [result, setResult] = useState(null);
+  const [showParentDashboard, setShowParentDashboard] = useState(false);
 
   const handleUploadSuccess = (data) => {
     setResult(data);
@@ -12,6 +14,14 @@ export default function App() {
     setResult(null);
   };
 
+  if (showParentDashboard) {
+    return (
+      <main style={{ minHeight: '100vh', padding: '1.5rem' }}>
+        <ParentDashboard onClose={() => setShowParentDashboard(false)} />
+      </main>
+    );
+  }
+
   return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem' }}>
       <header style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -19,6 +29,13 @@ export default function App() {
         <p style={{ fontSize: '1.1rem', color: '#4b5563', margin: '0.25rem 0 0 0' }}>
           Point, snap, and discover!
         </p>
+        <button
+          type="button"
+          onClick={() => setShowParentDashboard(true)}
+          style={{ background: 'none', border: 0, color: '#475569', cursor: 'pointer', marginTop: '0.75rem' }}
+        >
+          Parent area
+        </button>
       </header>
 
       {!result ? (
