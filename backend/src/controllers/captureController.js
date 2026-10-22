@@ -27,6 +27,14 @@ const handlePhotoUpload = async (req, res) => {
 
     const data = aiResponse.data;
 
+    if (!data.success) {
+      console.error('AI service analysis failed:', data.error || 'Unknown vision error');
+      return res.status(502).json({
+        error: 'AI_SERVICE_ANALYSIS_ERROR',
+        message: 'Could not analyze this item right now. Please try again.',
+      });
+    }
+
     // Safety gate triggered
     if (!data.is_safe) {
       return res.status(200).json({

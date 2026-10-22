@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import './PhotoCapture.css';
 
 export default function PhotoCapture({ onUploadSuccess }) {
@@ -11,6 +11,20 @@ export default function PhotoCapture({ onUploadSuccess }) {
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Manage preview URL lifecycle safely to prevent memory leaks
+  const previewUrl = useMemo(() => {
+    if (!capturedImage) return null;
+    return URL.createObjectURL(capturedImage);
+  }, [capturedImage]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   useEffect(() => {
     startCamera();
     return () => stopCamera();
@@ -18,6 +32,17 @@ export default function PhotoCapture({ onUploadSuccess }) {
 
   const startCamera = async () => {
     setErrorMessage('');
+
+    if (!window.isSecureContext) {
+      setErrorMessage('Camera access needs HTTPS on your phone. You can still choose a photo.');
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErrorMessage('This browser does not support camera access. You can still choose a photo.');
+      return;
+    }
+
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -27,8 +52,16 @@ export default function PhotoCapture({ onUploadSuccess }) {
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
-    } catch {
-      setErrorMessage("Camera couldn't open. You can still pick a photo!");
+    } catch (error) {
+      const cameraMessages = {
+        NotAllowedError: 'Camera permission was denied. Allow camera access in browser settings, then try again.',
+        NotFoundError: 'No camera was found on this device. You can still choose a photo.',
+        NotReadableError: 'The camera is busy in another app. Close it and try again.',
+        SecurityError: 'Camera access was blocked because this page is not using HTTPS.',
+      };
+      setErrorMessage(
+        cameraMessages[error.name] || "Camera couldn't open. You can still choose a photo!"
+      );
     }
   };
 
@@ -61,7 +94,7 @@ export default function PhotoCapture({ onUploadSuccess }) {
     const file = e.target.files?.[0];
     if (file) {
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-        setErrorMessage('Please pick a regular picture (JPEG or PNG).');
+        setErrorMessage('Please pick a regular picture (JPEG, PNG, or WEBP).');
         return;
       }
       setCapturedImage(file);
@@ -72,6 +105,10 @@ export default function PhotoCapture({ onUploadSuccess }) {
   const retakePhoto = () => {
     setCapturedImage(null);
     setErrorMessage('');
+    // Clear input so re-selecting the exact same file fires onChange
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     startCamera();
   };
 
@@ -81,7 +118,9 @@ export default function PhotoCapture({ onUploadSuccess }) {
     setErrorMessage('');
 
     const formData = new FormData();
-    formData.append('photo', capturedImage, 'capture.jpg');
+    // Preserve extension or default to .jpg
+    const filename = capturedImage.name || 'capture.jpg';
+    formData.append('photo', capturedImage, filename);
 
     try {
       const res = await fetch('/api/capture/upload', {
@@ -127,7 +166,7 @@ export default function PhotoCapture({ onUploadSuccess }) {
           />
         ) : (
           <img
-            src={URL.createObjectURL(capturedImage)}
+            src={previewUrl}
             alt="Captured item"
             className="image-preview"
           />
