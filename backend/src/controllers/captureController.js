@@ -1,7 +1,37 @@
 const axios = require('axios');
 const FormData = require('form-data');
+const InteractionLog = require('../models/InteractionLog');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+const saveInteraction = async (data) => {
+  const outcome = data.is_safe === false
+    ? 'unsafe'
+    : data.identified
+      ? 'identified'
+      : 'unidentified';
+
+  await InteractionLog.create({
+    outcome,
+    objectName: data.object_name,
+    kidSummary: data.kid_summary,
+    funFact: data.fun_fact,
+    actionPrompt: data.action_prompt,
+    readability: data.readability && {
+      gradeLevel: data.readability.grade_level,
+      readingEase: data.readability.reading_ease,
+      ageAppropriate: data.readability.age_appropriate,
+    },
+    grounding: data.grounding && {
+      grounded: data.grounding.grounded,
+      sourceTitle: data.grounding.source_title,
+      sourceUrl: data.grounding.source_url,
+    },
+    confidenceNote: data.confidence_note,
+    possibleObjects: data.possible_objects || [],
+    needsClearerImage: data.needs_clearer_image || false,
+  });
+};
 
 const handlePhotoUpload = async (req, res) => {
   try {
@@ -34,6 +64,8 @@ const handlePhotoUpload = async (req, res) => {
         message: 'Could not analyze this item right now. Please try again.',
       });
     }
+
+    await saveInteraction(data);
 
     // Safety gate triggered
     if (!data.is_safe) {
