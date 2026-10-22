@@ -101,6 +101,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 }
             ],
             response_format={"type": "json_object"},
+            max_tokens=300,
             temperature=0.1
         )
         parsed_det = json.loads(detection_completion.choices[0].message.content.strip())
@@ -223,6 +224,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
+            max_tokens=300,
             temperature=0.2
         )
         parsed_synth = json.loads(synthesis_completion.choices[0].message.content.strip())
