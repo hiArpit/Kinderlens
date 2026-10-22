@@ -12,7 +12,6 @@ const handlePhotoUpload = async (req, res) => {
       });
     }
 
-    // Prepare multipart form to forward the in-memory buffer to the Python AI service
     const form = new FormData();
     form.append('file', req.file.buffer, {
       filename: req.file.originalname || 'capture.jpg',
@@ -28,11 +27,23 @@ const handlePhotoUpload = async (req, res) => {
 
     const data = aiResponse.data;
 
-    // Handle low-confidence / unidentified cases gracefully (no silent errors)
+    // Safety gate triggered
+    if (!data.is_safe) {
+      return res.status(200).json({
+        success: true,
+        identified: false,
+        isSafe: false,
+        message: "This item is for grown-ups. Let's find something else to explore together!",
+        safetyReason: data.safety_flag_reason,
+      });
+    }
+
+    // Unidentified or blurry photo
     if (!data.identified) {
       return res.status(200).json({
         success: true,
         identified: false,
+        isSafe: true,
         message: "Hmm, I couldn't quite see what that was. Try holding it steady or moving to better light!",
         confidenceNote: data.confidence_note,
       });
@@ -41,15 +52,19 @@ const handlePhotoUpload = async (req, res) => {
     return res.status(200).json({
       success: true,
       identified: true,
+      isSafe: true,
       objectName: data.object_name,
-      rawDescription: data.raw_description,
+      kidSummary: data.kid_summary,
+      funFact: data.fun_fact,
+      actionPrompt: data.action_prompt,
+      readability: data.readability,
     });
 
   } catch (error) {
-    console.error('Error forwarding to AI service:', error.message);
+    console.error('Error in captureController:', error.message);
     return res.status(502).json({
       error: 'AI_SERVICE_ERROR',
-      message: 'Could not recognize the object right now. Please try again.',
+      message: 'Could not explore this item right now. Let’s try again!',
     });
   }
 };
