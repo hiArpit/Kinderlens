@@ -1,4 +1,8 @@
-// Handles receiving the uploaded photo buffer
+const axios = require('axios');
+const FormData = require('form-data');
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
 const handlePhotoUpload = async (req, res) => {
   try {
     if (!req.file) {
@@ -8,21 +12,44 @@ const handlePhotoUpload = async (req, res) => {
       });
     }
 
-    // In Phase 1 Step 2, req.file.buffer will be sent to the AI service.
-    // For Step 1, verify and acknowledge receipt:
+    // Prepare multipart form to forward the in-memory buffer to the Python AI service
+    const form = new FormData();
+    form.append('file', req.file.buffer, {
+      filename: req.file.originalname || 'capture.jpg',
+      contentType: req.file.mimetype,
+    });
+
+    const aiResponse = await axios.post(`${AI_SERVICE_URL}/api/vision/recognize`, form, {
+      headers: {
+        ...form.getHeaders(),
+      },
+      timeout: 15000,
+    });
+
+    const data = aiResponse.data;
+
+    // Handle low-confidence / unidentified cases gracefully (no silent errors)
+    if (!data.identified) {
+      return res.status(200).json({
+        success: true,
+        identified: false,
+        message: "Hmm, I couldn't quite see what that was. Try holding it steady or moving to better light!",
+        confidenceNote: data.confidence_note,
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      fileInfo: {
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        sizeBytes: req.file.size,
-      },
-      message: 'Photo received and validated successfully.',
+      identified: true,
+      objectName: data.object_name,
+      rawDescription: data.raw_description,
     });
+
   } catch (error) {
-    return res.status(500).json({
-      error: 'SERVER_ERROR',
-      message: 'Something went wrong while receiving the photo.',
+    console.error('Error forwarding to AI service:', error.message);
+    return res.status(502).json({
+      error: 'AI_SERVICE_ERROR',
+      message: 'Could not recognize the object right now. Please try again.',
     });
   }
 };
