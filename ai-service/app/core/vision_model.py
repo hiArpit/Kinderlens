@@ -25,6 +25,10 @@ OBJECT_DETECTION_PROMPT = """Analyze this image. Perform two steps:
    Identify the primary everyday item, toy, book, tool, food, animal, plant, vehicle, or structure.
    If a person or hand is holding an item, focus on the item being held (e.g., "Book", "Toy", "Apple", "Smartphone", "Eyeglasses").
    Do NOT identify the person. If only a person/face is visible with no clear everyday item, or if the image is blank or completely blurry, set "identified" to false.
+   Estimate confidence from 0.0 to 1.0. If two or more objects are plausible,
+   list them in "possible_objects" and set "needs_clearer_image" to true.
+   Set "needs_clearer_image" to true when the image is too unclear to distinguish
+   similar objects, even if one label seems slightly more likely.
 
 Return ONLY a JSON object:
 {
@@ -32,6 +36,9 @@ Return ONLY a JSON object:
   "safety_flag_reason": null,
   "identified": true,
   "search_term": "Book",
+  "confidence": 0.95,
+  "possible_objects": ["Book"],
+  "needs_clearer_image": false,
   "confidence_note": null
 }
 """
@@ -97,6 +104,12 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             temperature=0.1
         )
         parsed_det = json.loads(detection_completion.choices[0].message.content.strip())
+        confidence = parsed_det.get("confidence")
+        possible_objects = parsed_det.get("possible_objects") or []
+        if not isinstance(possible_objects, list):
+            possible_objects = []
+        possible_objects = [str(item).strip() for item in possible_objects if str(item).strip()]
+        needs_clearer_image = bool(parsed_det.get("needs_clearer_image"))
 
         if not parsed_det.get("is_safe", True):
             return {
@@ -111,6 +124,8 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "readability": None,
                 "grounding": None,
                 "confidence_note": None,
+                "possible_objects": possible_objects,
+                "needs_clearer_image": False,
                 "error": None
             }
 
@@ -127,6 +142,34 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "readability": None,
                 "grounding": None,
                 "confidence_note": parsed_det.get("confidence_note", "Could not clearly identify this item."),
+                "possible_objects": possible_objects,
+                "needs_clearer_image": True,
+                "error": None
+            }
+
+        if (
+            not isinstance(confidence, (int, float))
+            or confidence < 0.75
+            or needs_clearer_image
+            or len(possible_objects) > 1
+        ):
+            return {
+                "success": True,
+                "identified": False,
+                "is_safe": True,
+                "safety_flag_reason": None,
+                "object_name": None,
+                "kid_summary": None,
+                "fun_fact": None,
+                "action_prompt": None,
+                "readability": None,
+                "grounding": None,
+                "confidence_note": (
+                    parsed_det.get("confidence_note")
+                    or "This looks like more than one possible item. Please take a clearer photo."
+                ),
+                "possible_objects": possible_objects,
+                "needs_clearer_image": True,
                 "error": None
             }
 
@@ -161,6 +204,8 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                     "source_url": None
                 },
                 "confidence_note": "I could not find enough trusted information about this item yet.",
+                "possible_objects": possible_objects,
+                "needs_clearer_image": False,
                 "error": None
             }
 
@@ -226,6 +271,8 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "source_url": grounding_info.get("source_url")
             },
             "confidence_note": None,
+            "possible_objects": possible_objects,
+            "needs_clearer_image": False,
             "error": None
         }
 
@@ -243,5 +290,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             "readability": None,
             "grounding": None,
             "confidence_note": None,
+            "possible_objects": [],
+            "needs_clearer_image": False,
             "error": str(e)
         }
