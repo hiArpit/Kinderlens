@@ -15,6 +15,8 @@ const captureRoutes = require('./routes/capture');
 app.use('/api/capture', captureRoutes);
 const historyRoutes = require('./routes/history');
 app.use('/api/history', historyRoutes);
+const parentRoutes = require('./routes/parent');
+app.use('/api/parent', parentRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

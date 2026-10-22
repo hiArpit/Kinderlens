@@ -1,9 +1,10 @@
 const express = require('express');
 const InteractionLog = require('../models/InteractionLog');
+const { requireParentAuth } = require('../middlewares/parentAuth');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', requireParentAuth, async (req, res) => {
   try {
     const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 100);
     const history = await InteractionLog.find({})
