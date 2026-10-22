@@ -20,6 +20,9 @@ class VisionModelTests(unittest.TestCase):
             "is_safe": True,
             "identified": True,
             "search_term": "Unknown object",
+            "confidence": 0.9,
+            "possible_objects": ["Unknown object"],
+            "needs_clearer_image": False,
         })
         fetch_grounding.return_value = {
             "grounded": False,
@@ -44,6 +47,9 @@ class VisionModelTests(unittest.TestCase):
                 "is_safe": True,
                 "identified": True,
                 "search_term": "Book",
+                "confidence": 0.95,
+                "possible_objects": ["Book"],
+                "needs_clearer_image": False,
             }),
             completion({
                 "kid_summary": "Books have pages. They share ideas.",
@@ -65,6 +71,28 @@ class VisionModelTests(unittest.TestCase):
         self.assertTrue(result["grounding"]["grounded"])
         self.assertEqual(result["object_name"], "Book")
         self.assertEqual(create.call_count, 2)
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
+    def test_ambiguous_result_blocks_grounding_and_synthesis(self, create, fetch_grounding):
+        create.return_value = completion({
+            "is_safe": True,
+            "identified": True,
+            "search_term": "Book",
+            "confidence": 0.62,
+            "possible_objects": ["Book", "Diary"],
+            "needs_clearer_image": True,
+            "confidence_note": "This could be a book or diary.",
+        })
+
+        result = vision_model.analyze_image_buffer(b"image-bytes")
+
+        self.assertTrue(result["success"])
+        self.assertFalse(result["identified"])
+        self.assertTrue(result["needs_clearer_image"])
+        self.assertEqual(result["possible_objects"], ["Book", "Diary"])
+        self.assertEqual(create.call_count, 1)
+        fetch_grounding.assert_not_called()
 
 
 if __name__ == "__main__":

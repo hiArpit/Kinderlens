@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 class AgeMetrics(BaseModel):
@@ -23,4 +23,6 @@ class VisionRecognitionResponse(BaseModel):
     readability: Optional[AgeMetrics] = None
     grounding: Optional[GroundingSource] = None
     confidence_note: Optional[str] = None
+    possible_objects: list[str] = Field(default_factory=list)
+    needs_clearer_image: bool = False
     error: Optional[str] = None

@@ -54,6 +54,8 @@ const handlePhotoUpload = async (req, res) => {
         isSafe: true,
         message: data.confidence_note || "Hmm, I couldn't quite see what that was. Try holding it steady or moving to better light!",
         confidenceNote: data.confidence_note,
+        possibleObjects: data.possible_objects || [],
+        needsClearerImage: data.needs_clearer_image || false,
         grounding: data.grounding,
       });
     }
