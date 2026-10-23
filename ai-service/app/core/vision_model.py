@@ -53,19 +53,30 @@ VERIFIED REFERENCE TEXT:
 
 RULES:
 1. AGE CALIBRATION (Ages 6-8):
-   - Short sentences (6 to 10 words each).
-   - High-frequency, elementary words.
-   - Grounded physical analogy that matches the reference text.
+   - Give 3 clear sentences for the summary, not just a label.
+   - Use common elementary words and short sentences.
+   - You may use 10 to 16 words when needed to explain an idea clearly.
+   - If a science or history word is needed, explain it immediately in simple words.
+     Example: "A fossil is an old mark or piece of a living thing found in rock."
+   - Never use a difficult word by itself when a simpler word will work.
+   - Do not mention unrelated technical terms, such as fossil fuels, unless the
+     reference text directly explains them and the child-friendly meaning is included.
+   - Add a grounded physical analogy only when it matches the reference text.
 2. STRICT SAFETY:
    - Zero persona or roleplay: Never say "I", "me", "my", or "friend".
    - No open conversation or personal questions.
 3. OUTPUT FORMAT:
    Return a JSON object:
    {{
-     "kid_summary": "2 short, clear sentences explaining what this is and what it does based on the text.",
-     "fun_fact": "1 simple, verifiable fact taken directly from the text.",
-     "action_prompt": "1 safe physical observation activity (e.g., look for a shape, count buttons, or notice a color)."
+     "kid_summary": "3 short, clear sentences explaining what this is, what it does, and one useful detail based on the text.",
+     "fun_fact": "1 or 2 simple, verifiable sentences taken directly from the text.",
+     "action_prompt": "1 safe physical observation activity (e.g., look for a shape, count buttons, or notice a color).",
+     "vocabulary": [{{"term": "hard word or phrase", "meaning": "a very simple meaning for a child"}}]
    }}
+
+Return up to 5 vocabulary terms only when they are needed. Use exact words from
+the summary or fun fact. Do not include common words. Meanings must be one short,
+simple sentence and must use only the verified reference text.
 
 Return ONLY valid JSON.
 """
@@ -104,14 +115,23 @@ Return ONLY valid JSON:
 STORY_PROMPT = """Create a short learning story for children ages 6 to 8 about "{object_name}".
 Use ONLY facts stated in the verified reference text below. The story may use gentle
 imaginary framing, but it must not invent factual claims about the object.
-Write exactly 4 short paragraphs. Use simple words and keep each paragraph to 1 or 2 sentences.
+Write exactly 4 short paragraphs. Use simple words and keep each paragraph to 2 or 3 short sentences.
+Explain every science, history, or subject word the first time it appears.
+For example, write "A fossil is an old mark or piece of life found in rock."
+Do not use a difficult word alone when a simple word will work.
+Do not mention unrelated technical ideas, such as fossil fuels, unless the reference
+text directly explains them and the child-friendly meaning is included.
 Do not use scary, unsafe, violent, or roleplay language. Do not ask the child questions.
 
 VERIFIED REFERENCE TEXT:
 {reference_text}
 
 Return ONLY valid JSON:
-{{"title": "A short story title", "paragraphs": ["...", "...", "...", "..."]}}
+{{"title": "A short story title", "paragraphs": ["...", "...", "...", "..."], "vocabulary": [{{"term": "hard word or phrase", "meaning": "a very simple meaning for a child"}}]}}
+
+Return up to 5 vocabulary terms only when they are needed. Each term must appear
+in the story. Meanings must be one short, simple sentence based only on the
+verified reference text.
 """
 
 
@@ -128,6 +148,27 @@ def evaluate_readability(text: str) -> dict:
 
 
 ALLOWED_QUESTION_COUNTS = {3, 5, 10}
+
+
+def normalize_vocabulary(value, source_texts):
+    if not isinstance(value, list):
+        return []
+    combined_text = " ".join(source_texts).lower()
+    terms = []
+    for entry in value[:5]:
+        if not isinstance(entry, dict):
+            continue
+        term = entry.get("term")
+        meaning = entry.get("meaning")
+        if (
+            isinstance(term, str)
+            and isinstance(meaning, str)
+            and term.strip()
+            and meaning.strip()
+            and term.strip().lower() in combined_text
+        ):
+            terms.append({"term": term.strip(), "meaning": meaning.strip()})
+    return terms
 
 
 def generate_story(object_name: str) -> dict:
@@ -164,10 +205,13 @@ def generate_story(object_name: str) -> dict:
 
         title = title.strip()
         paragraphs = [paragraph.strip() for paragraph in paragraphs]
-        is_safe, violations = inspect_safety_completion([title, *paragraphs])
+        vocabulary = normalize_vocabulary(parsed.get("vocabulary"), [title, *paragraphs])
+        is_safe, violations = inspect_safety_completion(
+            [title, *paragraphs, *[item["meaning"] for item in vocabulary]]
+        )
         if not is_safe:
             return {
-                "success": True, "object_name": None, "title": None, "paragraphs": [],
+                "success": True, "object_name": None, "title": None, "paragraphs": [], "vocabulary": [],
                 "grounding": None, "is_safe": False,
                 "confidence_note": "Story content was blocked by the safety gate.",
                 "error": "; ".join(violations),
@@ -178,6 +222,7 @@ def generate_story(object_name: str) -> dict:
             "object_name": object_name,
             "title": title,
             "paragraphs": paragraphs,
+            "vocabulary": vocabulary,
             "grounding": {
                 "grounded": True,
                 "source_title": grounding_info.get("source_title"),
@@ -190,7 +235,7 @@ def generate_story(object_name: str) -> dict:
     except Exception as error:
         logger.exception("Story generation failed")
         return {
-            "success": False, "object_name": None, "title": None, "paragraphs": [],
+            "success": False, "object_name": None, "title": None, "paragraphs": [], "vocabulary": [],
             "grounding": None, "is_safe": True, "confidence_note": None,
             "error": str(error),
         }
@@ -424,7 +469,13 @@ def explain_object_name(object_name: str) -> dict:
         kid_summary = parsed_synth.get("kid_summary", "")
         fun_fact = parsed_synth.get("fun_fact", "")
         action_prompt = parsed_synth.get("action_prompt", "")
-        is_safe, violations = inspect_safety_completion([kid_summary, fun_fact, action_prompt])
+        vocabulary = normalize_vocabulary(
+            parsed_synth.get("vocabulary"),
+            [kid_summary, fun_fact]
+        )
+        is_safe, violations = inspect_safety_completion(
+            [kid_summary, fun_fact, action_prompt, *[item["meaning"] for item in vocabulary]]
+        )
 
         if not is_safe:
             return {
@@ -453,6 +504,7 @@ def explain_object_name(object_name: str) -> dict:
             "kid_summary": kid_summary,
             "fun_fact": fun_fact,
             "action_prompt": action_prompt,
+            "vocabulary": vocabulary,
             "readability": readability,
             "grounding": {
                 "grounded": True,
@@ -630,9 +682,18 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
         kid_summary = parsed_synth.get("kid_summary", "")
         fun_fact = parsed_synth.get("fun_fact", "")
         action_prompt = parsed_synth.get("action_prompt", "")
+        vocabulary = normalize_vocabulary(
+            parsed_synth.get("vocabulary"),
+            [kid_summary, fun_fact]
+        )
 
         # Step E: Post-generation content filter check
-        texts_to_check = [kid_summary, fun_fact, action_prompt]
+        texts_to_check = [
+            kid_summary,
+            fun_fact,
+            action_prompt,
+            *[item["meaning"] for item in vocabulary],
+        ]
         is_safe, violations = inspect_safety_completion(texts_to_check)
 
         if not is_safe:
@@ -664,6 +725,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             "kid_summary": kid_summary,
             "fun_fact": fun_fact,
             "action_prompt": action_prompt,
+            "vocabulary": vocabulary,
             "readability": readability_metrics,
             "grounding": {
                 "grounded": grounding_info.get("grounded", False),

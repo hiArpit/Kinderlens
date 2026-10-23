@@ -1,0 +1,43 @@
+.vocabulary-text {
+  display: inline;
+}
+
+.vocabulary-term {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px dotted currentColor;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0 0.08rem;
+}
+
+.vocabulary-term:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.vocabulary-popover {
+  background: #fff;
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(120, 53, 15, 0.15);
+  color: #78350f;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+}
+
+.vocabulary-popover p {
+  margin: 0.35rem 0 0.6rem;
+}
+
+.vocabulary-popover button {
+  background: #f59e0b;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.4rem 0.7rem;
+}
