@@ -102,3 +102,12 @@ npm run test:e2e
 
 The tests mock backend responses and cover the child-facing entry screen,
 parent-area separation, account setup, and child-profile creation controls.
+
+## Discovery Map and visual foundation
+
+The child-facing experience now includes a warm explorer visual foundation and
+a deterministic Discovery Map. The map connects a discovered object to
+child-friendly learning ideas such as space, weather, fossils, activities, and
+questions. Its first release is intentionally catalog-backed so relationships
+remain predictable and safe; richer knowledge-graph relationships can be added
+after the core release is validated.

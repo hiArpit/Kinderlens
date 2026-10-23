@@ -1,0 +1,152 @@
+:root {
+  color: #17324d;
+  font-family: Inter, ui-rounded, "Nunito", system-ui, -apple-system, sans-serif;
+  background: #fffaf3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(255, 224, 174, 0.42), transparent 26rem),
+    radial-gradient(circle at 92% 18%, rgba(186, 230, 253, 0.4), transparent 25rem),
+    #fffaf3;
+}
+
+button, input, select { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid #f4a261;
+  outline-offset: 3px;
+}
+
+.app-shell {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 1.25rem;
+}
+
+.app-header, .app-content {
+  max-width: 760px;
+  width: 100%;
+}
+
+.app-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0 1.1rem;
+}
+
+.brand {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+}
+
+.brand-mark { font-size: 2.1rem; }
+.brand h1 { color: #17324d; font-size: 1.45rem; margin: 0; }
+.brand p { color: #64748b; font-size: 0.78rem; margin: 0.1rem 0 0; }
+
+.parent-link {
+  background: #fff;
+  border: 1px solid #f0d4ad;
+  border-radius: 999px;
+  color: #a45132;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.55rem 0.85rem;
+}
+
+.hero {
+  background: linear-gradient(120deg, #17324d 0%, #28577c 70%, #387b8f 100%);
+  border-radius: 30px;
+  box-shadow: 0 18px 38px rgba(23, 50, 77, 0.2);
+  color: #fff;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  position: relative;
+}
+
+.hero:after {
+  background: rgba(255, 221, 159, 0.2);
+  border-radius: 50%;
+  content: "";
+  height: 12rem;
+  position: absolute;
+  right: -3rem;
+  top: -5rem;
+  width: 12rem;
+}
+
+.hero h2 { font-size: clamp(1.45rem, 5vw, 2rem); margin: 0 0 0.35rem; position: relative; z-index: 1; }
+.hero p { color: #d9eff6; margin: 0; max-width: 34rem; position: relative; z-index: 1; }
+
+.toolbar {
+  align-items: center;
+  background: rgba(255,255,255,0.78);
+  border: 1px solid #f1dfc7;
+  border-radius: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.toolbar label { color: #64748b; font-size: 0.85rem; font-weight: 800; }
+.toolbar select { border: 1px solid #cbd5e1; border-radius: 10px; color: #17324d; padding: 0.45rem 0.6rem; }
+.profile-note { color: #a45132; font-size: 0.82rem; font-weight: 700; }
+
+.setup-banner {
+  background: #fff2d9;
+  border: 1px solid #f4d099;
+  border-radius: 18px;
+  color: #8a4b20;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.setup-banner p { margin: 0.25rem 0 0.65rem; }
+.setup-banner button { background: #c05b35; border: 0; border-radius: 999px; color: #fff; cursor: pointer; font-weight: 800; padding: 0.5rem 0.8rem; }
+
+.result-card {
+  background: #fff;
+  border: 1px solid #f1dfc7;
+  border-radius: 28px;
+  box-shadow: 0 18px 45px rgba(89, 63, 35, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: clamp(1rem, 4vw, 2rem);
+  width: 100%;
+}
+
+.result-heading { text-align: center; }
+.result-heading-icon { font-size: 3.4rem; line-height: 1; }
+.result-heading h2 { color: #17324d; font-size: 1.8rem; margin: 0.5rem 0 0; text-transform: capitalize; }
+.result-panel { border-radius: 16px; padding: 1rem; }
+.result-panel.summary { background: #eef8ff; color: #24577b; }
+.result-panel.fact { background: #fff2d9; color: #8a4b20; }
+.result-panel.action { background: #eef9f1; color: #276749; }
+.result-panel p { font-size: 1.05rem; line-height: 1.45; margin: 0.3rem 0 0; }
+.result-panel strong { display: block; }
+.result-meta { color: #64748b; display: flex; font-size: 0.8rem; justify-content: space-between; }
+.snap-another { align-self: center; background: #c05b35; border: 0; border-radius: 999px; color: #fff; cursor: pointer; font-size: 1rem; font-weight: 800; padding: 0.8rem 1.4rem; }
+
+@media (max-width: 520px) {
+  .app-shell { padding: 0.8rem; }
+  .app-header { align-items: flex-start; }
+  .brand p { display: none; }
+  .parent-link { font-size: 0.75rem; }
+  .toolbar { align-items: flex-start; flex-direction: column; }
+  .toolbar label { display: flex; flex-direction: column; gap: 0.3rem; }
+}
