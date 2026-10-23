@@ -21,6 +21,8 @@ const wonderListRoutes = require('./routes/wonderList');
 app.use('/api/wonder-list', wonderListRoutes);
 const quizRoutes = require('./routes/quiz');
 app.use('/api/quiz', quizRoutes);
+const storyRoutes = require('./routes/story');
+app.use('/api/story', storyRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -3,6 +3,7 @@ import PhotoCapture from './components/Capture/PhotoCapture';
 import ParentDashboard from './components/Parent/ParentDashboard';
 import WonderList from './components/WonderList/WonderList';
 import Quiz from './components/Quiz/Quiz';
+import Story from './components/Story/Story';
 
 export default function App() {
   const [result, setResult] = useState(null);
@@ -113,6 +114,7 @@ export default function App() {
                 )}
               </div>
               <Quiz objectName={result.objectName} />
+              <Story objectName={result.objectName} />
             </>
           ) : (
             <div style={{ textAlign: 'center' }}>

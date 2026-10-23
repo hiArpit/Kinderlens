@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.vision_model import analyze_image_buffer, explain_object_name, generate_quiz, generate_review_quiz
-from app.schemas.vision import VisionRecognitionResponse, QuizResponse
+from app.core.vision_model import analyze_image_buffer, explain_object_name, generate_quiz, generate_review_quiz, generate_story
+from app.schemas.vision import VisionRecognitionResponse, QuizResponse, StoryResponse
 
 ALLOWED_QUESTION_COUNTS = {3, 5, 10}
 
@@ -60,3 +60,11 @@ async def create_review_quiz(payload: dict):
     if question_count not in ALLOWED_QUESTION_COUNTS:
         raise HTTPException(status_code=400, detail="Question count must be 3, 5, or 10.")
     return generate_review_quiz(object_names, question_count)
+
+
+@app.post("/api/story", response_model=StoryResponse)
+async def create_story(payload: dict):
+    object_name = payload.get("object_name") if isinstance(payload, dict) else None
+    if not isinstance(object_name, str) or not object_name.strip():
+        raise HTTPException(status_code=400, detail="Object name is required.")
+    return generate_story(object_name.strip())
