@@ -261,6 +261,28 @@ function slugify(value = '') {
 }
 
 export default function DiscoveryMap({ objectName = '', onReset }) {
+  if (!objectName) {
+    return (
+      <section className="discovery-map discovery-map-empty" aria-labelledby="discovery-map-heading">
+        <div className="discovery-map-heading">
+          <div>
+            <span className="eyebrow">Your learning trail</span>
+            <h2 id="discovery-map-heading">Discovery Map</h2>
+            <p>Choose a wonder to build a four-step learning trail.</p>
+          </div>
+          <span className="map-orbit" aria-hidden="true">✦</span>
+        </div>
+        <div className="empty-map-message">
+          <span aria-hidden="true">🧭</span>
+          <div>
+            <strong>Your map starts with a question</strong>
+            <p>Explore an object and we&apos;ll connect it to related ideas.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const startingTopic = objectName || 'your next discovery';
   const [topicTrail, setTopicTrail] = React.useState([startingTopic]);
   const activeTopic = topicTrail[topicTrail.length - 1];

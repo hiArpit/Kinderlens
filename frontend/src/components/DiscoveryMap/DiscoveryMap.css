@@ -8,6 +8,44 @@
   width: 100%;
 }
 
+.discovery-map-empty {
+  min-height: 245px;
+}
+
+.empty-map-message {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px dashed #e7b66b;
+  border-radius: 18px;
+  color: #64748b;
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+}
+
+.empty-map-message > span {
+  align-items: center;
+  background: #fff2d9;
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 1.4rem;
+  height: 2.8rem;
+  justify-content: center;
+  width: 2.8rem;
+}
+
+.empty-map-message strong {
+  color: #17324d;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.empty-map-message p {
+  font-size: 0.9rem;
+}
+
 .discovery-map-heading {
   align-items: flex-start;
   display: flex;
