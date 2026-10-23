@@ -15,6 +15,32 @@ def completion(payload):
 class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
+    def test_story_uses_grounding_and_returns_paragraphs(self, create, fetch_grounding):
+        create.return_value = completion({
+            "title": "The Telescope That Looked Far",
+            "paragraphs": [
+                "A telescope helps people see far things.",
+                "It uses light to show distant objects.",
+                "Its glass lenses help bring far views closer.",
+                "A careful observer can notice shapes in the sky.",
+            ],
+        })
+        fetch_grounding.return_value = {
+            "grounded": True,
+            "source_title": "Telescope",
+            "source_url": "https://en.wikipedia.org/wiki/Telescope",
+            "extract": "A telescope is an instrument that helps see distant objects using light.",
+        }
+
+        result = vision_model.generate_story("Telescope")
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["is_safe"])
+        self.assertEqual(len(result["paragraphs"]), 4)
+        self.assertTrue(result["grounding"]["grounded"])
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
     def test_review_quiz_uses_multiple_grounded_objects(self, create, fetch_grounding):
         create.return_value = completion({
             "questions": [

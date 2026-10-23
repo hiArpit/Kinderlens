@@ -43,3 +43,13 @@ class QuizResponse(BaseModel):
     is_safe: bool = True
     confidence_note: Optional[str] = None
     error: Optional[str] = None
+
+class StoryResponse(BaseModel):
+    success: bool
+    object_name: Optional[str] = None
+    title: Optional[str] = None
+    paragraphs: list[str] = Field(default_factory=list)
+    grounding: Optional[GroundingSource] = None
+    is_safe: bool = True
+    confidence_note: Optional[str] = None
+    error: Optional[str] = None

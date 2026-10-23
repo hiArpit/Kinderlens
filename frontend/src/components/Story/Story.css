@@ -1,0 +1,71 @@
+.story-card {
+  background: #fff7ed;
+  border-radius: 16px;
+  padding: 1rem;
+}
+
+.story-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.story-heading > span {
+  font-size: 1.8rem;
+}
+
+.story-heading h3,
+.story-heading p {
+  margin: 0;
+}
+
+.story-heading h3 {
+  color: #9a3412;
+}
+
+.story-heading p,
+.story-content {
+  color: #7c2d12;
+}
+
+.story-primary-button {
+  background: #ea580c;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 0.9rem;
+  padding: 0.7rem 1rem;
+}
+
+.story-primary-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.story-content {
+  margin-top: 1rem;
+}
+
+.story-content h4 {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.story-content p {
+  line-height: 1.5;
+  margin: 0.65rem 0;
+}
+
+.story-content small {
+  color: #9a3412;
+  display: block;
+  margin-top: 0.75rem;
+}
+
+.story-error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+}

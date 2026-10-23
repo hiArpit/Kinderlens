@@ -4,12 +4,12 @@ const interactionLogSchema = new mongoose.Schema(
   {
     outcome: {
       type: String,
-      enum: ['identified', 'unidentified', 'unsafe', 'quiz'],
+      enum: ['identified', 'unidentified', 'unsafe', 'quiz', 'story'],
       required: true,
     },
     activityType: {
       type: String,
-      enum: ['exploration', 'quiz'],
+      enum: ['exploration', 'quiz', 'story'],
       default: 'exploration',
     },
     objectName: {
@@ -75,6 +75,16 @@ const interactionLogSchema = new mongoose.Schema(
         default: null,
       },
       score: {
+        type: Number,
+        default: null,
+      },
+    },
+    story: {
+      title: {
+        type: String,
+        default: null,
+      },
+      paragraphCount: {
         type: Number,
         default: null,
       },

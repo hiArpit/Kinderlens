@@ -101,6 +101,19 @@ Return ONLY valid JSON:
 {{"questions": [{{"question": "...", "options": ["...", "...", "..."], "answer": 0, "explanation": "A short reason based on the reference text."}}]}}
 """
 
+STORY_PROMPT = """Create a short learning story for children ages 6 to 8 about "{object_name}".
+Use ONLY facts stated in the verified reference text below. The story may use gentle
+imaginary framing, but it must not invent factual claims about the object.
+Write exactly 4 short paragraphs. Use simple words and keep each paragraph to 1 or 2 sentences.
+Do not use scary, unsafe, violent, or roleplay language. Do not ask the child questions.
+
+VERIFIED REFERENCE TEXT:
+{reference_text}
+
+Return ONLY valid JSON:
+{{"title": "A short story title", "paragraphs": ["...", "...", "...", "..."]}}
+"""
+
 
 def evaluate_readability(text: str) -> dict:
     if not text:
@@ -115,6 +128,72 @@ def evaluate_readability(text: str) -> dict:
 
 
 ALLOWED_QUESTION_COUNTS = {3, 5, 10}
+
+
+def generate_story(object_name: str) -> dict:
+    try:
+        grounding_info = fetch_grounding_text(object_name)
+        if not grounding_info.get("grounded") or not grounding_info.get("extract"):
+            return {
+                "success": True, "object_name": None, "title": None, "paragraphs": [],
+                "grounding": {"grounded": False, "source_title": None, "source_url": None},
+                "is_safe": True,
+                "confidence_note": "I could not find enough trusted information to make a story yet.",
+                "error": None,
+            }
+
+        completion_result = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[{"role": "user", "content": STORY_PROMPT.format(
+                object_name=object_name,
+                reference_text=grounding_info["extract"],
+            )}],
+            response_format={"type": "json_object"},
+            max_tokens=500,
+            temperature=0.3,
+        )
+        parsed = json.loads(completion_result.choices[0].message.content.strip())
+        title = parsed.get("title")
+        paragraphs = parsed.get("paragraphs")
+        if (
+            not isinstance(title, str) or not title.strip()
+            or not isinstance(paragraphs, list) or len(paragraphs) != 4
+            or not all(isinstance(paragraph, str) and paragraph.strip() for paragraph in paragraphs)
+        ):
+            raise ValueError("Story response must contain a title and exactly four paragraphs.")
+
+        title = title.strip()
+        paragraphs = [paragraph.strip() for paragraph in paragraphs]
+        is_safe, violations = inspect_safety_completion([title, *paragraphs])
+        if not is_safe:
+            return {
+                "success": True, "object_name": None, "title": None, "paragraphs": [],
+                "grounding": None, "is_safe": False,
+                "confidence_note": "Story content was blocked by the safety gate.",
+                "error": "; ".join(violations),
+            }
+
+        return {
+            "success": True,
+            "object_name": object_name,
+            "title": title,
+            "paragraphs": paragraphs,
+            "grounding": {
+                "grounded": True,
+                "source_title": grounding_info.get("source_title"),
+                "source_url": grounding_info.get("source_url"),
+            },
+            "is_safe": True,
+            "confidence_note": None,
+            "error": None,
+        }
+    except Exception as error:
+        logger.exception("Story generation failed")
+        return {
+            "success": False, "object_name": None, "title": None, "paragraphs": [],
+            "grounding": None, "is_safe": True, "confidence_note": None,
+            "error": str(error),
+        }
 
 
 def generate_quiz(object_name: str, question_count: int = 3) -> dict:
