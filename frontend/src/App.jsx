@@ -101,10 +101,24 @@ export default function App() {
               </div>
             )}
 
-            <DiscoveryMap />
-            <WonderList onExplore={setResult} language={language} childProfileId={childProfileId} />
-            <Quiz review language={language} childProfileId={childProfileId} />
-            <PhotoCapture onUploadSuccess={setResult} language={language} childProfileId={childProfileId} />
+            <div className="discovery-workspace">
+              <section className="capture-card">
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">Best way to begin</span>
+                    <h2>Look through your lens</h2>
+                    <p>Point at one interesting thing and let&apos;s explore it together.</p>
+                  </div>
+                  <span className="section-icon" aria-hidden="true">📸</span>
+                </div>
+                <PhotoCapture onUploadSuccess={setResult} language={language} childProfileId={childProfileId} />
+              </section>
+              <DiscoveryMap />
+            </div>
+            <div className="learning-section">
+              <WonderList onExplore={setResult} language={language} childProfileId={childProfileId} />
+              <Quiz review language={language} childProfileId={childProfileId} />
+            </div>
           </>
         ) : (
           <DiscoveryResult

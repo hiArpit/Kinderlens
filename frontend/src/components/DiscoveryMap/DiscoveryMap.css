@@ -46,7 +46,7 @@
 }
 
 .map-canvas {
-  height: 270px;
+  height: 250px;
   margin: 0.6rem auto 0;
   max-width: 640px;
   position: relative;
@@ -64,7 +64,7 @@
   padding: 0.65rem 0.55rem;
   position: absolute;
   text-align: center;
-  width: 125px;
+  width: 132px;
   z-index: 1;
 }
 
@@ -87,14 +87,14 @@
   background: #fff2d9;
   border-color: #e7a24a;
   left: 50%;
-  top: 50%;
+  top: 42%;
   transform: translate(-50%, -50%);
   width: 140px;
 }
 
-.map-node-1 { left: 2%; top: 8%; }
-.map-node-2 { right: 2%; top: 8%; }
-.map-node-3 { bottom: 3%; left: 50%; transform: translateX(-50%); }
+.map-node-1 { left: 1%; top: 7%; }
+.map-node-2 { right: 1%; top: 7%; }
+.map-node-3 { bottom: 1%; left: 50%; transform: translateX(-50%); }
 
 .map-line {
   background: #f0c88f;
@@ -103,11 +103,11 @@
   position: absolute;
   top: 50%;
   transform-origin: left center;
-  width: 26%;
+  width: 25%;
 }
 
-.map-line-one { transform: rotate(-155deg); }
-.map-line-two { transform: rotate(-25deg); }
+.map-line-one { transform: rotate(-153deg); }
+.map-line-two { transform: rotate(-27deg); }
 .map-line-three { transform: rotate(90deg); }
 
 .discovery-map-footer {
@@ -132,7 +132,7 @@
 }
 
 @media (max-width: 520px) {
-  .map-canvas { height: 310px; }
+  .map-canvas { height: 300px; }
   .map-node { width: 112px; }
   .map-node-1 { left: 0; }
   .map-node-2 { right: 0; }
