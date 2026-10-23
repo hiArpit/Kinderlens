@@ -17,6 +17,8 @@ const historyRoutes = require('./routes/history');
 app.use('/api/history', historyRoutes);
 const parentRoutes = require('./routes/parent');
 app.use('/api/parent', parentRoutes);
+const wonderListRoutes = require('./routes/wonderList');
+app.use('/api/wonder-list', wonderListRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

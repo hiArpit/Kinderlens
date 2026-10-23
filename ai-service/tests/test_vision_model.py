@@ -15,6 +15,51 @@ def completion(payload):
 class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
+    def test_named_object_explanation_uses_grounding(self, create, fetch_grounding):
+        create.return_value = completion({
+            "kid_summary": "The Moon goes around Earth. It shines in the night sky.",
+            "fun_fact": "The Moon is Earth's space neighbor.",
+            "action_prompt": "Look for the Moon tonight.",
+        })
+        fetch_grounding.return_value = {
+            "grounded": True,
+            "source_title": "Moon",
+            "source_url": "https://en.wikipedia.org/wiki/Moon",
+            "extract": "The Moon is Earth's only natural satellite.",
+        }
+
+        result = vision_model.explain_object_name("Moon")
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["identified"])
+        self.assertEqual(result["object_name"], "Moon")
+        self.assertTrue(result["grounding"]["grounded"])
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
+    def test_named_object_explanation_keeps_overage_readability_visible(self, create, fetch_grounding):
+        create.return_value = completion({
+            "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
+            "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
+            "action_prompt": "Compare their body structures.",
+        })
+        fetch_grounding.return_value = {
+            "grounded": True,
+            "source_title": "Dinosaur",
+            "source_url": "https://en.wikipedia.org/wiki/Dinosaur",
+            "extract": "Dinosaurs are a diverse group of reptiles.",
+        }
+
+        result = vision_model.explain_object_name("Dinosaur")
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["identified"])
+        self.assertFalse(result["readability"]["age_appropriate"])
+        self.assertEqual(result["object_name"], "Dinosaur")
+        self.assertEqual(create.call_count, 1)
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
     def test_grounding_failure_blocks_synthesis(self, create, fetch_grounding):
         create.return_value = completion({
             "is_safe": True,

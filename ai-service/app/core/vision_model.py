@@ -16,6 +16,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # Use a current production vision model. The former Llama 3.2 preview model
 # is no longer available through Groq.
 VISION_MODEL = "qwen/qwen3.8-27b"
+MAX_CHILD_GRADE_LEVEL = 4.0
 
 OBJECT_DETECTION_PROMPT = """Analyze this image. Perform two steps:
 1. SAFETY CHECK:
@@ -78,8 +79,98 @@ def evaluate_readability(text: str) -> dict:
     return {
         "grade_level": round(grade, 1),
         "reading_ease": round(ease, 1),
-        "age_appropriate": grade <= 4.0
+        "age_appropriate": grade <= MAX_CHILD_GRADE_LEVEL
     }
+
+
+def explain_object_name(object_name: str) -> dict:
+    try:
+        grounding_info = fetch_grounding_text(object_name)
+        if not grounding_info.get("grounded") or not grounding_info.get("extract"):
+            return {
+                "success": True,
+                "identified": False,
+                "is_safe": True,
+                "safety_flag_reason": None,
+                "object_name": None,
+                "kid_summary": None,
+                "fun_fact": None,
+                "action_prompt": None,
+                "readability": None,
+                "grounding": {"grounded": False, "source_title": None, "source_url": None},
+                "confidence_note": "I could not find enough trusted information about this item yet.",
+                "error": None,
+            }
+
+        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
+            object_name=object_name,
+            reference_text=grounding_info["extract"]
+        )
+        synthesis_completion = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            max_tokens=300,
+            temperature=0.2
+        )
+        parsed_synth = json.loads(synthesis_completion.choices[0].message.content.strip())
+        kid_summary = parsed_synth.get("kid_summary", "")
+        fun_fact = parsed_synth.get("fun_fact", "")
+        action_prompt = parsed_synth.get("action_prompt", "")
+        is_safe, violations = inspect_safety_completion([kid_summary, fun_fact, action_prompt])
+
+        if not is_safe:
+            return {
+                "success": True,
+                "identified": False,
+                "is_safe": False,
+                "safety_flag_reason": "; ".join(violations),
+                "object_name": None,
+                "kid_summary": None,
+                "fun_fact": None,
+                "action_prompt": None,
+                "readability": None,
+                "grounding": None,
+                "confidence_note": "Output blocked by content safety gate.",
+                "error": None,
+            }
+
+        readability = evaluate_readability(f"{kid_summary} {fun_fact}")
+
+        return {
+            "success": True,
+            "identified": True,
+            "is_safe": True,
+            "safety_flag_reason": None,
+            "object_name": object_name,
+            "kid_summary": kid_summary,
+            "fun_fact": fun_fact,
+            "action_prompt": action_prompt,
+            "readability": readability,
+            "grounding": {
+                "grounded": True,
+                "source_title": grounding_info.get("source_title"),
+                "source_url": grounding_info.get("source_url"),
+            },
+            "confidence_note": None,
+            "error": None,
+        }
+    except Exception as error:
+        logger.exception("Named object explanation failed")
+        return {
+            "success": False,
+            "identified": False,
+            "is_safe": True,
+            "safety_flag_reason": None,
+            "object_name": None,
+            "kid_summary": None,
+            "fun_fact": None,
+            "action_prompt": None,
+            "readability": None,
+            "grounding": None,
+            "confidence_note": None,
+            "error": str(error),
+        }
 
 
 def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:

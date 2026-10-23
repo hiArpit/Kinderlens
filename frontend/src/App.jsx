@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PhotoCapture from './components/Capture/PhotoCapture';
 import ParentDashboard from './components/Parent/ParentDashboard';
+import WonderList from './components/WonderList/WonderList';
 
 export default function App() {
   const [result, setResult] = useState(null);
@@ -39,7 +40,10 @@ export default function App() {
       </header>
 
       {!result ? (
-        <PhotoCapture onUploadSuccess={handleUploadSuccess} />
+        <>
+          <WonderList onExplore={handleUploadSuccess} />
+          <PhotoCapture onUploadSuccess={handleUploadSuccess} />
+        </>
       ) : (
         <div style={{
           backgroundColor: '#ffffff',
