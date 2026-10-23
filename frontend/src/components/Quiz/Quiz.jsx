@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import './Quiz.css';
 
+async function readJsonResponse(response, fallbackMessage) {
+  const body = await response.text();
+  if (!body.trim()) {
+    throw new Error(fallbackMessage);
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+}
+
 export default function Quiz({ objectName }) {
   const [questions, setQuestions] = useState(null);
   const [quizId, setQuizId] = useState(null);
@@ -20,7 +33,7 @@ export default function Quiz({ objectName }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ object_name: objectName }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response, 'The quiz service returned an empty response. Please restart the backend and try again.');
       if (!response.ok) throw new Error(data.message || 'Could not make a quiz.');
       if (!data.available) throw new Error(data.message || 'A quiz is not available yet.');
       setQuestions(data.questions || []);
@@ -48,7 +61,7 @@ export default function Quiz({ objectName }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ score: result }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response, 'The quiz result service returned an empty response. Please try again.');
       if (!response.ok) throw new Error(data.message || 'Could not save your quiz result.');
       setScore(result);
     } catch (scoreError) {
