@@ -34,6 +34,7 @@ router.post('/:slug/explore', async (req, res) => {
       kidSummary: data.kid_summary,
       funFact: data.fun_fact,
       actionPrompt: data.action_prompt,
+      vocabulary: data.vocabulary || [],
       readability: data.readability && {
         gradeLevel: data.readability.grade_level,
         readingEase: data.readability.reading_ease,
@@ -55,6 +56,7 @@ router.post('/:slug/explore', async (req, res) => {
       kidSummary: data.kid_summary,
       funFact: data.fun_fact,
       actionPrompt: data.action_prompt,
+      vocabulary: data.vocabulary || [],
       readability: data.readability,
       grounding: data.grounding,
       message: data.confidence_note,

@@ -29,6 +29,16 @@ const interactionLogSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    vocabulary: [{
+      term: {
+        type: String,
+        trim: true,
+      },
+      meaning: {
+        type: String,
+        trim: true,
+      },
+    }],
     readability: {
       gradeLevel: {
         type: Number,

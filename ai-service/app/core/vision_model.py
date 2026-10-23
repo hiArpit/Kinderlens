@@ -70,8 +70,13 @@ RULES:
    {{
      "kid_summary": "3 short, clear sentences explaining what this is, what it does, and one useful detail based on the text.",
      "fun_fact": "1 or 2 simple, verifiable sentences taken directly from the text.",
-     "action_prompt": "1 safe physical observation activity (e.g., look for a shape, count buttons, or notice a color)."
+     "action_prompt": "1 safe physical observation activity (e.g., look for a shape, count buttons, or notice a color).",
+     "vocabulary": [{{"term": "hard word or phrase", "meaning": "a very simple meaning for a child"}}]
    }}
+
+Return up to 5 vocabulary terms only when they are needed. Use exact words from
+the summary or fun fact. Do not include common words. Meanings must be one short,
+simple sentence and must use only the verified reference text.
 
 Return ONLY valid JSON.
 """
@@ -122,7 +127,11 @@ VERIFIED REFERENCE TEXT:
 {reference_text}
 
 Return ONLY valid JSON:
-{{"title": "A short story title", "paragraphs": ["...", "...", "...", "..."]}}
+{{"title": "A short story title", "paragraphs": ["...", "...", "...", "..."], "vocabulary": [{{"term": "hard word or phrase", "meaning": "a very simple meaning for a child"}}]}}
+
+Return up to 5 vocabulary terms only when they are needed. Each term must appear
+in the story. Meanings must be one short, simple sentence based only on the
+verified reference text.
 """
 
 
@@ -139,6 +148,27 @@ def evaluate_readability(text: str) -> dict:
 
 
 ALLOWED_QUESTION_COUNTS = {3, 5, 10}
+
+
+def normalize_vocabulary(value, source_texts):
+    if not isinstance(value, list):
+        return []
+    combined_text = " ".join(source_texts).lower()
+    terms = []
+    for entry in value[:5]:
+        if not isinstance(entry, dict):
+            continue
+        term = entry.get("term")
+        meaning = entry.get("meaning")
+        if (
+            isinstance(term, str)
+            and isinstance(meaning, str)
+            and term.strip()
+            and meaning.strip()
+            and term.strip().lower() in combined_text
+        ):
+            terms.append({"term": term.strip(), "meaning": meaning.strip()})
+    return terms
 
 
 def generate_story(object_name: str) -> dict:
@@ -175,10 +205,13 @@ def generate_story(object_name: str) -> dict:
 
         title = title.strip()
         paragraphs = [paragraph.strip() for paragraph in paragraphs]
-        is_safe, violations = inspect_safety_completion([title, *paragraphs])
+        vocabulary = normalize_vocabulary(parsed.get("vocabulary"), [title, *paragraphs])
+        is_safe, violations = inspect_safety_completion(
+            [title, *paragraphs, *[item["meaning"] for item in vocabulary]]
+        )
         if not is_safe:
             return {
-                "success": True, "object_name": None, "title": None, "paragraphs": [],
+                "success": True, "object_name": None, "title": None, "paragraphs": [], "vocabulary": [],
                 "grounding": None, "is_safe": False,
                 "confidence_note": "Story content was blocked by the safety gate.",
                 "error": "; ".join(violations),
@@ -189,6 +222,7 @@ def generate_story(object_name: str) -> dict:
             "object_name": object_name,
             "title": title,
             "paragraphs": paragraphs,
+            "vocabulary": vocabulary,
             "grounding": {
                 "grounded": True,
                 "source_title": grounding_info.get("source_title"),
@@ -201,7 +235,7 @@ def generate_story(object_name: str) -> dict:
     except Exception as error:
         logger.exception("Story generation failed")
         return {
-            "success": False, "object_name": None, "title": None, "paragraphs": [],
+            "success": False, "object_name": None, "title": None, "paragraphs": [], "vocabulary": [],
             "grounding": None, "is_safe": True, "confidence_note": None,
             "error": str(error),
         }
@@ -435,7 +469,13 @@ def explain_object_name(object_name: str) -> dict:
         kid_summary = parsed_synth.get("kid_summary", "")
         fun_fact = parsed_synth.get("fun_fact", "")
         action_prompt = parsed_synth.get("action_prompt", "")
-        is_safe, violations = inspect_safety_completion([kid_summary, fun_fact, action_prompt])
+        vocabulary = normalize_vocabulary(
+            parsed_synth.get("vocabulary"),
+            [kid_summary, fun_fact]
+        )
+        is_safe, violations = inspect_safety_completion(
+            [kid_summary, fun_fact, action_prompt, *[item["meaning"] for item in vocabulary]]
+        )
 
         if not is_safe:
             return {
@@ -464,6 +504,7 @@ def explain_object_name(object_name: str) -> dict:
             "kid_summary": kid_summary,
             "fun_fact": fun_fact,
             "action_prompt": action_prompt,
+            "vocabulary": vocabulary,
             "readability": readability,
             "grounding": {
                 "grounded": True,
@@ -641,9 +682,18 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
         kid_summary = parsed_synth.get("kid_summary", "")
         fun_fact = parsed_synth.get("fun_fact", "")
         action_prompt = parsed_synth.get("action_prompt", "")
+        vocabulary = normalize_vocabulary(
+            parsed_synth.get("vocabulary"),
+            [kid_summary, fun_fact]
+        )
 
         # Step E: Post-generation content filter check
-        texts_to_check = [kid_summary, fun_fact, action_prompt]
+        texts_to_check = [
+            kid_summary,
+            fun_fact,
+            action_prompt,
+            *[item["meaning"] for item in vocabulary],
+        ]
         is_safe, violations = inspect_safety_completion(texts_to_check)
 
         if not is_safe:
@@ -675,6 +725,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             "kid_summary": kid_summary,
             "fun_fact": fun_fact,
             "action_prompt": action_prompt,
+            "vocabulary": vocabulary,
             "readability": readability_metrics,
             "grounding": {
                 "grounded": grounding_info.get("grounded", False),

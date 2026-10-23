@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Story.css';
+import VocabularyText from '../Vocabulary/VocabularyText';
 
 async function readJsonResponse(response) {
   const body = await response.text();
@@ -57,7 +58,11 @@ export default function Story({ objectName }) {
       {story && (
         <article className="story-content">
           <h4>{story.title}</h4>
-          {story.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+          {story.paragraphs.map((paragraph) => (
+            <p key={paragraph}>
+              <VocabularyText text={paragraph} vocabulary={story.vocabulary} />
+            </p>
+          ))}
           <small>📖 Facts verified via {story.grounding?.source_title}</small>
         </article>
       )}

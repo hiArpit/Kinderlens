@@ -4,6 +4,7 @@ import ParentDashboard from './components/Parent/ParentDashboard';
 import WonderList from './components/WonderList/WonderList';
 import Quiz from './components/Quiz/Quiz';
 import Story from './components/Story/Story';
+import VocabularyText from './components/Vocabulary/VocabularyText';
 
 export default function App() {
   const [result, setResult] = useState(null);
@@ -71,7 +72,7 @@ export default function App() {
               {/* Kid-Calibrated Summary */}
               <div style={{ backgroundColor: '#eff6ff', borderRadius: '16px', padding: '1rem' }}>
                 <p style={{ color: '#1e40af', fontSize: '1.15rem', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>
-                  {result.kidSummary}
+                  <VocabularyText text={result.kidSummary} vocabulary={result.vocabulary} />
                 </p>
               </div>
 
@@ -82,7 +83,7 @@ export default function App() {
                     🌟 Fun Fact:
                   </span>
                   <p style={{ color: '#78350f', fontSize: '1.05rem', margin: 0, lineHeight: '1.4' }}>
-                    {result.funFact}
+                    <VocabularyText text={result.funFact} vocabulary={result.vocabulary} />
                   </p>
                 </div>
               )}

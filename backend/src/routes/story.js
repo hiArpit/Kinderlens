@@ -62,6 +62,7 @@ router.post('/', async (req, res) => {
       objectName: data.object_name,
       title: data.title,
       paragraphs: data.paragraphs,
+      vocabulary: data.vocabulary || [],
       grounding: data.grounding,
     });
   } catch (error) {
