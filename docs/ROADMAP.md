@@ -111,3 +111,12 @@ child-friendly learning ideas such as space, weather, fossils, activities, and
 questions. Its first release is intentionally catalog-backed so relationships
 remain predictable and safe; richer knowledge-graph relationships can be added
 after the core release is validated.
+
+## Production API configuration
+
+The backend accepts credentialed browser requests only from `FRONTEND_ORIGIN`
+(comma-separated for multiple deployments) plus the local development origins.
+Set `NODE_ENV=production` to enable Secure account cookies, and set
+`TRUST_PROXY=true` only when the API is behind a trusted reverse proxy so
+rate-limit client IPs are resolved correctly. Use the variables documented in
+`backend/.env.example` for deployment configuration.

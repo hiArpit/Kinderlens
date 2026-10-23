@@ -73,7 +73,8 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('Set-Cookie', `${ACCOUNT_COOKIE}=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/`);
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${ACCOUNT_COOKIE}=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/${secure}`);
   return res.status(200).json({ success: true });
 });
 

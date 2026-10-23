@@ -3,7 +3,27 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors());
+const configuredOrigins = (process.env.FRONTEND_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = new Set([
+  ...configuredOrigins,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+]);
+
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
+app.use(cors({
+  credentials: true,
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error('CORS origin is not allowed'));
+  },
+}));
 app.use(express.json({ limit: '100kb' }));
 
 const { rateLimit } = require('./middlewares/rateLimit');
