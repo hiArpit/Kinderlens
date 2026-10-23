@@ -14,7 +14,13 @@ app.use('/api/history', historyRoutes);
 const parentRoutes = require('./routes/parent');
 app.use('/api/parent', rateLimit({ name: 'pin-auth', windowMs: 15 * 60 * 1000, max: 10 }), parentRoutes);
 const accountRoutes = require('./routes/account');
-app.use('/api/account', rateLimit({ name: 'account-auth', windowMs: 15 * 60 * 1000, max: 20 }), accountRoutes);
+const accountAuthLimit = rateLimit({ name: 'account-auth', windowMs: 15 * 60 * 1000, max: 20 });
+app.use('/api/account', (req, res, next) => {
+  if (req.method === 'POST' && ['/register', '/login'].includes(req.path)) {
+    return accountAuthLimit(req, res, next);
+  }
+  return next();
+}, accountRoutes);
 const wonderListRoutes = require('./routes/wonderList');
 app.use('/api/wonder-list', rateLimit({ name: 'ai', windowMs: 60 * 1000, max: 30 }), wonderListRoutes);
 const quizRoutes = require('./routes/quiz');

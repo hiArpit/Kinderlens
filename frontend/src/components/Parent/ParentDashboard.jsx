@@ -23,6 +23,8 @@ function ParentDashboard({ onClose }) {
   const [history, setHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('highlights');
   const [error, setError] = useState('');
+  const [accountError, setAccountError] = useState('');
+  const [pinError, setPinError] = useState('');
   const [notice, setNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [profiles, setProfiles] = useState([]);
@@ -91,7 +93,10 @@ function ParentDashboard({ onClose }) {
 
   const unlock = async (event) => {
     event.preventDefault();
+    if (isLoading) return;
     setError('');
+    setPinError('');
+    setIsLoading(true);
     try {
       const response = await fetch('/api/parent/unlock', {
         method: 'POST',
@@ -106,13 +111,18 @@ function ParentDashboard({ onClose }) {
       setToken(data.token);
       setPin('');
     } catch (unlockError) {
-      setError(unlockError.message);
+      setPinError(unlockError.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const submitAccount = async (event) => {
     event.preventDefault();
+    if (isLoading) return;
     setError('');
+    setAccountError('');
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/account/${isRegistering ? 'register' : 'login'}`, {
         method: 'POST',
@@ -129,7 +139,9 @@ function ParentDashboard({ onClose }) {
       setEmail('');
       setPassword('');
     } catch (accountError) {
-      setError(accountError.message);
+      setAccountError(accountError.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -249,8 +261,8 @@ function ParentDashboard({ onClose }) {
           <input id="parent-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
           <label htmlFor="parent-password">Parent password</label>
           <input id="parent-password" type="password" minLength="8" value={password} onChange={(event) => setPassword(event.target.value)} required />
-          {error && <p id="parent-error" className="parent-error" role="alert">{error}</p>}
-          <button type="submit" className="parent-primary-button">
+          {accountError && <p id="parent-account-error" className="parent-error" role="alert">{accountError}</p>}
+          <button type="submit" className="parent-primary-button" disabled={isLoading}>
             {isRegistering ? 'Create parent account' : 'Sign in'}
           </button>
           <button type="button" className="parent-link-button" onClick={() => setIsRegistering((current) => !current)}>
@@ -268,10 +280,10 @@ function ParentDashboard({ onClose }) {
             value={pin}
             onChange={(event) => setPin(event.target.value)}
             required
-            aria-describedby={error ? 'parent-error' : undefined}
+            aria-describedby={pinError ? 'parent-pin-error' : undefined}
           />
-          {error && <p id="parent-error" className="parent-error" role="alert">{error}</p>}
-          <button type="submit" className="parent-primary-button">Unlock Dashboard</button>
+          {pinError && <p id="parent-pin-error" className="parent-error" role="alert">{pinError}</p>}
+          <button type="submit" className="parent-primary-button" disabled={isLoading}>Unlock Dashboard</button>
         </form>
         <button type="button" className="parent-link-button" onClick={onClose}>Back to KinderLens</button>
       </section>
