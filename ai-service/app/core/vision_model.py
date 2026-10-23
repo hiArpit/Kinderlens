@@ -16,6 +16,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # Use a current production vision model. The former Llama 3.2 preview model
 # is no longer available through Groq.
 VISION_MODEL = "qwen/qwen3.8-27b"
+MAX_CHILD_GRADE_LEVEL = 4.0
 
 OBJECT_DETECTION_PROMPT = """Analyze this image. Perform two steps:
 1. SAFETY CHECK:
@@ -78,7 +79,7 @@ def evaluate_readability(text: str) -> dict:
     return {
         "grade_level": round(grade, 1),
         "reading_ease": round(ease, 1),
-        "age_appropriate": grade <= 4.0
+        "age_appropriate": grade <= MAX_CHILD_GRADE_LEVEL
     }
 
 
@@ -134,6 +135,23 @@ def explain_object_name(object_name: str) -> dict:
                 "error": None,
             }
 
+        readability = evaluate_readability(f"{kid_summary} {fun_fact}")
+        if not readability["age_appropriate"]:
+            return {
+                "success": True,
+                "identified": False,
+                "is_safe": True,
+                "safety_flag_reason": None,
+                "object_name": None,
+                "kid_summary": None,
+                "fun_fact": None,
+                "action_prompt": None,
+                "readability": readability,
+                "grounding": None,
+                "confidence_note": "This explanation needs a simpler version before it is ready.",
+                "error": None,
+            }
+
         return {
             "success": True,
             "identified": True,
@@ -143,7 +161,7 @@ def explain_object_name(object_name: str) -> dict:
             "kid_summary": kid_summary,
             "fun_fact": fun_fact,
             "action_prompt": action_prompt,
-            "readability": evaluate_readability(f"{kid_summary} {fun_fact}"),
+            "readability": readability,
             "grounding": {
                 "grounded": True,
                 "source_title": grounding_info.get("source_title"),
@@ -344,6 +362,23 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
         # Step F: Readability assessment
         combined_text = f"{kid_summary} {fun_fact}"
         readability_metrics = evaluate_readability(combined_text)
+        if not readability_metrics["age_appropriate"]:
+            return {
+                "success": True,
+                "identified": False,
+                "is_safe": True,
+                "safety_flag_reason": None,
+                "object_name": None,
+                "kid_summary": None,
+                "fun_fact": None,
+                "action_prompt": None,
+                "readability": readability_metrics,
+                "grounding": None,
+                "confidence_note": "This explanation needs a simpler version before it is ready.",
+                "possible_objects": possible_objects,
+                "needs_clearer_image": False,
+                "error": None
+            }
 
         return {
             "success": True,
