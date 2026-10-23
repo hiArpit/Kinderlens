@@ -110,6 +110,27 @@ test('discovery map progresses through four related Rainbow topics', async ({ pa
   await expect(page.getByText('Your map starts with a question')).toBeVisible();
 });
 
+test('KinderLens logo returns from a discovery result to the home page', async ({ page }) => {
+  await page.route('**/api/wonder-list/rainbow/explore', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        identified: true,
+        objectName: 'Rainbow',
+        kidSummary: 'A rainbow appears when light meets water drops.',
+        language: 'english',
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /Rainbow.*Explore/ }).click();
+  await expect(page.getByRole('heading', { name: 'Discovery Map' })).toBeVisible();
+  await page.getByRole('button', { name: 'Go to KinderLens home' }).click();
+  await expect(page.getByRole('heading', { name: 'Wonder List' })).toBeVisible();
+  await expect(page.getByText('What will we discover today?')).toBeVisible();
+});
+
 test('discovery map gives a captured object a four-stage trail', async ({ page }) => {
   await page.route('**/api/capture/upload', async (route) => {
     await route.fulfill({

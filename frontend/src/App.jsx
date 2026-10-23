@@ -37,6 +37,11 @@ export default function App() {
     else localStorage.removeItem('kinderlens_child_profile');
   };
 
+  const goHome = () => {
+    setResult(null);
+    setShowParentDashboard(false);
+  };
+
   if (showParentDashboard) {
     return (
       <main className="app-shell">
@@ -50,13 +55,13 @@ export default function App() {
   return (
     <main className="app-shell">
       <header className="app-header">
-        <div className="brand">
+        <button type="button" className="brand brand-home" aria-label="Go to KinderLens home" onClick={goHome}>
           <span className="brand-mark" aria-hidden="true">🔍</span>
           <div>
             <h1>KinderLens</h1>
             <p>Small questions. Big discoveries.</p>
           </div>
-        </div>
+        </button>
         <button type="button" className="parent-link" aria-label="Parent area" onClick={() => setShowParentDashboard(true)}>
           Parent area
         </button>

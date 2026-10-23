@@ -58,6 +58,20 @@ button:not(:disabled):hover {
   gap: 0.7rem;
 }
 
+.brand-home {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.brand-home:hover {
+  filter: none;
+  transform: none;
+}
+
 .brand-mark { font-size: 2.1rem; }
 .brand h1 { color: #17324d; font-size: 1.45rem; margin: 0; }
 .brand p { color: #64748b; font-size: 0.78rem; margin: 0.1rem 0 0; }
