@@ -14,7 +14,7 @@ async function readJsonResponse(response, fallbackMessage) {
   }
 }
 
-export default function Quiz({ objectName }) {
+export default function Quiz({ objectName, review = false }) {
   const [questions, setQuestions] = useState(null);
   const [quizId, setQuizId] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -28,10 +28,10 @@ export default function Quiz({ objectName }) {
     setScore(null);
     setAnswers({});
     try {
-      const response = await fetch('/api/quiz', {
+      const response = await fetch(review ? '/api/quiz/review' : '/api/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ object_name: objectName }),
+        body: JSON.stringify(review ? {} : { object_name: objectName }),
       });
       const data = await readJsonResponse(response, 'The quiz service returned an empty response. Please restart the backend and try again.');
       if (!response.ok) throw new Error(data.message || 'Could not make a quiz.');
@@ -75,13 +75,13 @@ export default function Quiz({ objectName }) {
         <span aria-hidden="true">🧠</span>
         <div>
           <h3 id="quiz-heading">Quick quiz</h3>
-          <p>See what you remember about {objectName}.</p>
+          <p>{review ? 'See what you remember from your discoveries.' : `See what you remember about ${objectName}.`}</p>
         </div>
       </div>
 
       {!questions && (
         <button type="button" className="quiz-primary-button" onClick={startQuiz} disabled={isLoading}>
-          {isLoading ? 'Making your quiz...' : 'Start quiz'}
+          {isLoading ? 'Making your quiz...' : review ? 'Start review quiz' : 'Start quiz'}
         </button>
       )}
 

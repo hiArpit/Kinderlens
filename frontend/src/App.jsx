@@ -43,6 +43,7 @@ export default function App() {
       {!result ? (
         <>
           <WonderList onExplore={handleUploadSuccess} />
+          <Quiz review />
           <PhotoCapture onUploadSuccess={handleUploadSuccess} />
         </>
       ) : (

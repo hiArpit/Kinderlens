@@ -72,6 +72,57 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.post('/review', async (req, res) => {
+  try {
+    const history = await InteractionLog.find({
+      outcome: 'identified',
+      objectName: { $ne: null },
+    }).sort({ createdAt: -1 }).limit(8).select('objectName').lean();
+    const objectNames = [...new Set(history.map((entry) => entry.objectName).filter(Boolean))];
+
+    const aiResponse = await axios.post(
+      `${AI_SERVICE_URL}/api/quiz/review`,
+      { object_names: objectNames },
+      { timeout: 30000 }
+    );
+    const data = aiResponse.data;
+
+    if (!data.success) {
+      return res.status(502).json({ error: 'AI_SERVICE_ANALYSIS_ERROR', message: 'Could not make a review quiz right now.' });
+    }
+    if (!data.questions?.length) {
+      return res.status(200).json({
+        success: true,
+        available: false,
+        message: data.confidence_note || 'Explore more objects before starting a review quiz.',
+      });
+    }
+
+    const historyEntry = await InteractionLog.create({
+      outcome: 'quiz',
+      activityType: 'quiz',
+      objectName: 'Review Quiz',
+      grounding: { grounded: true, sourceTitle: 'Verified object references' },
+      quiz: { questionCount: data.questions.length },
+    });
+
+    return res.status(200).json({
+      success: true,
+      available: true,
+      quizId: historyEntry._id,
+      objectNames: data.object_names,
+      questions: data.questions,
+      groundingSources: data.grounding_sources,
+    });
+  } catch (error) {
+    console.error('Error generating review quiz:', error.message);
+    return res.status(502).json({
+      error: 'AI_SERVICE_ERROR',
+      message: 'Could not make a review quiz right now. Please try again.',
+    });
+  }
+});
+
 router.put('/:id/score', async (req, res) => {
   const score = Number(req.body?.score);
   if (!Number.isInteger(score) || score < 0) {

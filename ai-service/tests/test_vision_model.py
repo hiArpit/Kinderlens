@@ -15,6 +15,29 @@ def completion(payload):
 class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
+    def test_review_quiz_uses_multiple_grounded_objects(self, create, fetch_grounding):
+        create.return_value = completion({
+            "questions": [
+                {"question": "What helps a telescope see far?", "options": ["Light", "Soil", "Water"], "answer": 0},
+                {"question": "What does a book have?", "options": ["Pages", "Wings", "Wheels"], "answer": 0},
+                {"question": "Which item shares ideas?", "options": ["A book", "A telescope", "A cloud"], "answer": 0},
+            ]
+        })
+        fetch_grounding.side_effect = [
+            {"grounded": True, "source_title": "Telescope", "source_url": "telescope-url", "extract": "A telescope helps see far things."},
+            {"grounded": True, "source_title": "Book", "source_url": "book-url", "extract": "A book has pages and words."},
+        ]
+
+        result = vision_model.generate_review_quiz(["Telescope", "Book", "Book"])
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["object_names"], ["Telescope", "Book"])
+        self.assertEqual(len(result["questions"]), 3)
+        self.assertEqual(len(result["grounding_sources"]), 2)
+        self.assertEqual(create.call_count, 1)
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
     def test_quiz_uses_grounding_and_validates_questions(self, create, fetch_grounding):
         create.return_value = completion({
             "questions": [

@@ -35,8 +35,10 @@ class QuizQuestion(BaseModel):
 class QuizResponse(BaseModel):
     success: bool
     object_name: Optional[str] = None
+    object_names: list[str] = Field(default_factory=list)
     questions: list[QuizQuestion] = Field(default_factory=list)
     grounding: Optional[GroundingSource] = None
+    grounding_sources: list[GroundingSource] = Field(default_factory=list)
     is_safe: bool = True
     confidence_note: Optional[str] = None
     error: Optional[str] = None

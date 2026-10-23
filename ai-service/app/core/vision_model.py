@@ -87,6 +87,20 @@ Return ONLY valid JSON in this shape:
 }}
 """
 
+REVIEW_QUIZ_PROMPT = """Create a short review quiz for children ages 6 to 8.
+Use ONLY facts stated in the verified reference sections below.
+Create exactly 3 multiple-choice questions. Each question must have exactly 3
+answer options, and "answer" must be the zero-based index of the correct option.
+Use simple words. Include questions about more than one object when possible.
+Do not use facts not in the reference sections.
+
+VERIFIED REFERENCE SECTIONS:
+{reference_text}
+
+Return ONLY valid JSON:
+{{"questions": [{{"question": "...", "options": ["...", "...", "..."], "answer": 0}}]}}
+"""
+
 
 def evaluate_readability(text: str) -> dict:
     if not text:
@@ -107,6 +121,7 @@ def generate_quiz(object_name: str) -> dict:
             return {
                 "success": True,
                 "object_name": None,
+                "object_names": [],
                 "questions": [],
                 "grounding": {"grounded": False, "source_title": None, "source_url": None},
                 "is_safe": True,
@@ -171,6 +186,7 @@ def generate_quiz(object_name: str) -> dict:
         return {
             "success": True,
             "object_name": object_name,
+            "object_names": [object_name],
             "questions": normalized_questions,
             "grounding": {
                 "grounded": True,
@@ -186,11 +202,92 @@ def generate_quiz(object_name: str) -> dict:
         return {
             "success": False,
             "object_name": None,
+            "object_names": [],
             "questions": [],
             "grounding": None,
             "is_safe": True,
             "confidence_note": None,
             "error": str(error),
+        }
+
+
+def generate_review_quiz(object_names: list[str]) -> dict:
+    try:
+        unique_names = list(dict.fromkeys(name.strip() for name in object_names if isinstance(name, str) and name.strip()))
+        if not unique_names:
+            return {
+                "success": True, "object_names": [], "questions": [],
+                "grounding_sources": [], "is_safe": True,
+                "confidence_note": "Explore an item first to start a review quiz.", "error": None,
+            }
+
+        references = []
+        grounding_sources = []
+        for name in unique_names:
+            grounding_info = fetch_grounding_text(name)
+            if not grounding_info.get("grounded") or not grounding_info.get("extract"):
+                return {
+                    "success": True, "object_names": [], "questions": [],
+                    "grounding_sources": [], "is_safe": True,
+                    "confidence_note": "A trusted review quiz is not available yet.", "error": None,
+                }
+            references.append(f"ABOUT {name}:\n{grounding_info['extract']}")
+            grounding_sources.append({
+                "grounded": True,
+                "source_title": grounding_info.get("source_title"),
+                "source_url": grounding_info.get("source_url"),
+            })
+
+        completion_result = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[{"role": "user", "content": REVIEW_QUIZ_PROMPT.format(
+                reference_text="\n\n".join(references)
+            )}],
+            response_format={"type": "json_object"},
+            max_tokens=300,
+            temperature=0.1,
+        )
+        parsed = json.loads(completion_result.choices[0].message.content.strip())
+        questions = parsed.get("questions")
+        if not isinstance(questions, list) or len(questions) != 3:
+            raise ValueError("Review quiz response must contain exactly three questions.")
+
+        normalized = []
+        text_to_check = []
+        for question in questions:
+            prompt_text = question.get("question") if isinstance(question, dict) else None
+            options = question.get("options") if isinstance(question, dict) else None
+            answer = question.get("answer") if isinstance(question, dict) else None
+            if (
+                not isinstance(prompt_text, str) or not prompt_text.strip()
+                or not isinstance(options, list) or len(options) != 3
+                or not all(isinstance(option, str) and option.strip() for option in options)
+                or not isinstance(answer, int) or answer < 0 or answer >= len(options)
+            ):
+                raise ValueError("Review quiz question failed validation.")
+            normalized.append({"question": prompt_text.strip(), "options": [option.strip() for option in options], "answer": answer})
+            text_to_check.extend([prompt_text, *options])
+
+        is_safe, violations = inspect_safety_completion(text_to_check)
+        if not is_safe:
+            return {
+                "success": True, "object_names": [], "questions": [],
+                "grounding_sources": [], "is_safe": False,
+                "confidence_note": "Review quiz content was blocked by the safety gate.",
+                "error": "; ".join(violations),
+            }
+
+        return {
+            "success": True, "object_names": unique_names, "questions": normalized,
+            "grounding_sources": grounding_sources, "is_safe": True,
+            "confidence_note": None, "error": None,
+        }
+    except Exception as error:
+        logger.exception("Review quiz generation failed")
+        return {
+            "success": False, "object_names": [], "questions": [],
+            "grounding_sources": [], "is_safe": True,
+            "confidence_note": None, "error": str(error),
         }
 
 
