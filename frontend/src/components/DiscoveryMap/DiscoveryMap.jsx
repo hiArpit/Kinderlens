@@ -7,6 +7,21 @@ const connections = {
     { icon: '🌊', label: 'Tides', detail: 'The Moon helps move ocean water' },
     { icon: '🚀', label: 'Exploration', detail: 'People have visited the Moon' },
   ],
+  space: [
+    { icon: '🌙', label: 'Moon', detail: 'A bright neighbour in space' },
+    { icon: '⭐', label: 'Stars', detail: 'Distant glowing suns' },
+    { icon: '🚀', label: 'Exploration', detail: 'People and robots travel far' },
+  ],
+  tides: [
+    { icon: '🌊', label: 'Ocean', detail: 'Water moves around our planet' },
+    { icon: '🌙', label: 'Moon', detail: 'The Moon helps move ocean water' },
+    { icon: '🏖️', label: 'Shore', detail: 'Where land and water meet' },
+  ],
+  exploration: [
+    { icon: '🚀', label: 'Rocket', detail: 'A vehicle for reaching space' },
+    { icon: '🌙', label: 'Moon', detail: 'A world people have visited' },
+    { icon: '🧑‍🚀', label: 'Astronauts', detail: 'People who explore space' },
+  ],
   dinosaur: [
     { icon: '🦴', label: 'Fossils', detail: 'Clues from long ago' },
     { icon: '🌋', label: 'Earth', detail: 'A changing home for life' },
@@ -35,8 +50,18 @@ function slugify(value = '') {
 }
 
 export default function DiscoveryMap({ objectName = '', onReset }) {
-  const title = objectName || 'your next discovery';
-  const related = connections[slugify(objectName)] || fallbackConnections;
+  const [activeTopic, setActiveTopic] = React.useState(objectName || 'your next discovery');
+  const title = activeTopic;
+  const related = connections[slugify(activeTopic)] || fallbackConnections;
+
+  const selectTopic = (label) => {
+    setActiveTopic(label);
+  };
+
+  const resetMap = () => {
+    setActiveTopic(objectName || 'your next discovery');
+    onReset?.();
+  };
 
   return (
     <section className="discovery-map" aria-labelledby="discovery-map-heading">
@@ -59,18 +84,24 @@ export default function DiscoveryMap({ objectName = '', onReset }) {
           <small>Start here</small>
         </div>
         {related.map((item, index) => (
-          <div className={`map-node map-node-${index + 1}`} key={item.label}>
+          <button
+            type="button"
+            className={`map-node map-node-${index + 1}`}
+            key={item.label}
+            onClick={() => selectTopic(item.label)}
+            aria-label={`Open ${item.label} learning connection`}
+          >
             <span aria-hidden="true">{item.icon}</span>
             <strong>{item.label}</strong>
             <small>{item.detail}</small>
-          </div>
+          </button>
         ))}
       </div>
 
       <div className="discovery-map-footer">
         <span>🌱 Keep exploring to grow your map</span>
-        {onReset && (
-          <button type="button" className="map-reset-button" onClick={onReset}>
+        {(onReset || activeTopic !== (objectName || 'your next discovery')) && (
+          <button type="button" className="map-reset-button" onClick={resetMap}>
             Find something new
           </button>
         )}

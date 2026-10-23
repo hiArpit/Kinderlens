@@ -68,6 +68,23 @@
   z-index: 1;
 }
 
+button.map-node {
+  cursor: pointer;
+  font: inherit;
+}
+
+button.map-node:hover {
+  background: #fff8e9;
+  border-color: #c05b35;
+  box-shadow: 0 12px 24px rgba(192, 91, 53, 0.18);
+  transform: translateY(-3px);
+}
+
+button.map-node:focus-visible {
+  outline: 3px solid #f4a261;
+  outline-offset: 3px;
+}
+
 .map-node > span {
   font-size: 1.45rem;
 }
@@ -84,6 +101,7 @@
 }
 
 .map-node-center {
+  cursor: default;
   background: #fff2d9;
   border-color: #e7a24a;
   left: 50%;
@@ -92,9 +110,20 @@
   width: 140px;
 }
 
+.map-node-center:hover {
+  background: #fff2d9;
+  border-color: #e7a24a;
+  box-shadow: 0 8px 20px rgba(89, 63, 35, 0.1);
+  transform: translate(-50%, -50%);
+}
+
 .map-node-1 { left: 1%; top: 7%; }
 .map-node-2 { right: 1%; top: 7%; }
 .map-node-3 { bottom: 0; left: 50%; transform: translateX(-50%); }
+
+button.map-node-3:hover {
+  transform: translateX(-50%) translateY(-3px);
+}
 
 .map-line {
   background: #f0c88f;
