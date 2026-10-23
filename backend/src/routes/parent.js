@@ -5,6 +5,7 @@ const { createParentToken } = require('../middlewares/parentAuth');
 const router = express.Router();
 
 router.post('/unlock', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const configuredPin = process.env.PARENT_PIN;
   const submittedPin = typeof req.body?.pin === 'string' ? req.body.pin : '';
 

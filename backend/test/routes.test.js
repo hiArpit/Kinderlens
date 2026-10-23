@@ -7,6 +7,9 @@ process.env.PARENT_PIN = '2468';
 
 const app = require('../src/app');
 const { createParentToken, requireParentAuth } = require('../src/middlewares/parentAuth');
+const { clearRateLimitBuckets } = require('../src/middlewares/rateLimit');
+
+test.afterEach(() => clearRateLimitBuckets());
 
 test('health endpoint reports a healthy backend', async () => {
   const response = await request(app).get('/health');
@@ -115,6 +118,18 @@ test('parent auth middleware accepts a valid signed token', () => {
 
   requireParentAuth(req, res, () => {
     nextCalled = true;
+  });
+
+  test('auth rate limits return retry guidance', async () => {
+    const responses = [];
+    for (let attempt = 0; attempt < 11; attempt += 1) {
+      responses.push(await request(app).post('/api/parent/unlock').send({ pin: 'wrong' }));
+    }
+    const limited = responses.at(-1);
+
+    assert.equal(limited.status, 429);
+    assert.equal(limited.body.error, 'RATE_LIMITED');
+    assert.ok(limited.headers['retry-after']);
   });
 
   assert.equal(nextCalled, true);

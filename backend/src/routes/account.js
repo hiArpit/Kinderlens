@@ -29,6 +29,7 @@ const setSession = (res, parentId) => {
 };
 
 router.post('/register', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const password = req.body?.password;
   if (!validCredentials(email, password)) {
@@ -51,6 +52,7 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const password = req.body?.password;
   try {
@@ -70,6 +72,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Set-Cookie', `${ACCOUNT_COOKIE}=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/`);
   return res.status(200).json({ success: true });
 });

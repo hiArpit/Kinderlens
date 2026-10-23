@@ -80,3 +80,9 @@ PIN remains as a local prototype fallback while account migration is tested.
 Activity requests can now carry a selected child profile. The backend verifies
 that the profile belongs to the signed-in parent before saving captures,
 Wonder List explorations, quizzes, or stories.
+
+## Reliability hardening
+
+The backend now applies bounded JSON request sizes, rate limits to parent
+authentication and AI-backed routes, retry guidance for throttled requests,
+and non-cacheable responses for account and PIN authentication.

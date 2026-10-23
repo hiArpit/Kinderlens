@@ -20,3 +20,5 @@
    parent authentication and destructive actions require confirmation.
 10. **Account boundaries are explicit.** Account-authenticated history is scoped
     to the signed parent identity, and child profiles belong to that parent.
+11. **Abuse controls protect availability.** Authentication and AI-backed
+     endpoints use request limits, while oversized JSON requests are rejected.
