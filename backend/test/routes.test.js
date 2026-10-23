@@ -43,6 +43,22 @@ test('story validates object before calling AI', async () => {
   assert.equal(response.body.error, 'OBJECT_NAME_REQUIRED');
 });
 
+test('parent account registration validates credentials before database access', async () => {
+  const response = await request(app)
+    .post('/api/account/register')
+    .send({ email: 'not-an-email', password: 'short' });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.error, 'INVALID_ACCOUNT_DETAILS');
+});
+
+test('child profiles require an account session', async () => {
+  const response = await request(app).get('/api/account/profiles');
+
+  assert.equal(response.status, 401);
+  assert.equal(response.body.error, 'PARENT_AUTH_REQUIRED');
+});
+
 test('parent history rejects missing and invalid authorization', async () => {
   const missing = await request(app).get('/api/history');
   const invalid = await request(app)

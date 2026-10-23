@@ -7,7 +7,8 @@ const router = express.Router();
 router.get('/', requireParentAuth, async (req, res) => {
   try {
     const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 100);
-    const history = await InteractionLog.find({})
+    const filter = req.parentId ? { parentId: req.parentId } : {};
+    const history = await InteractionLog.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
@@ -27,7 +28,8 @@ router.get('/', requireParentAuth, async (req, res) => {
 
 router.get('/export', requireParentAuth, async (req, res) => {
   try {
-    const history = await InteractionLog.find({})
+    const filter = req.parentId ? { parentId: req.parentId } : {};
+    const history = await InteractionLog.find(filter)
       .sort({ createdAt: -1 })
       .lean();
 
@@ -48,7 +50,10 @@ router.get('/export', requireParentAuth, async (req, res) => {
 
 router.delete('/:id', requireParentAuth, async (req, res) => {
   try {
-    const deleted = await InteractionLog.findByIdAndDelete(req.params.id);
+    const filter = req.parentId
+      ? { _id: req.params.id, parentId: req.parentId }
+      : { _id: req.params.id };
+    const deleted = await InteractionLog.findOneAndDelete(filter);
     if (!deleted) {
       return res.status(404).json({
         error: 'HISTORY_ENTRY_NOT_FOUND',
@@ -67,7 +72,7 @@ router.delete('/:id', requireParentAuth, async (req, res) => {
 
 router.delete('/', requireParentAuth, async (req, res) => {
   try {
-    const result = await InteractionLog.deleteMany({});
+    const result = await InteractionLog.deleteMany(req.parentId ? { parentId: req.parentId } : {});
     return res.status(200).json({
       success: true,
       deletedCount: result.deletedCount,

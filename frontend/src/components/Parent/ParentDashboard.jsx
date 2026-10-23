@@ -9,6 +9,10 @@ function formatDate(value) {
 
 function ParentDashboard({ onClose }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [accountMode, setAccountMode] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
   const [history, setHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('highlights');
@@ -25,7 +29,8 @@ function ParentDashboard({ onClose }) {
       setNotice('');
       try {
         const response = await fetch('/api/history', {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
+          headers: accountMode ? {} : { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
         if (!response.ok) {
@@ -42,7 +47,7 @@ function ParentDashboard({ onClose }) {
     };
 
     loadHistory();
-  }, [token]);
+  }, [token, accountMode]);
 
   const identified = useMemo(
     () => history.filter((entry) => entry.outcome === 'identified'),
@@ -78,9 +83,35 @@ function ParentDashboard({ onClose }) {
     }
   };
 
+  const submitAccount = async (event) => {
+    event.preventDefault();
+    setError('');
+    try {
+      const response = await fetch(`/api/account/${isRegistering ? 'register' : 'login'}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Could not sign in.');
+      localStorage.removeItem(TOKEN_KEY);
+      setAccountMode(true);
+      setToken('account-session');
+      setEmail('');
+      setPassword('');
+    } catch (accountError) {
+      setError(accountError.message);
+    }
+  };
+
   const lock = () => {
+    if (accountMode) {
+      fetch('/api/account/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    }
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
+    setAccountMode(false);
     setHistory([]);
   };
 
@@ -91,7 +122,8 @@ function ParentDashboard({ onClose }) {
     try {
       const response = await fetch(`/api/history/${entryId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        headers: accountMode ? {} : { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Could not delete this entry.');
@@ -109,7 +141,8 @@ function ParentDashboard({ onClose }) {
     try {
       const response = await fetch('/api/history', {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        headers: accountMode ? {} : { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Could not delete history.');
@@ -125,7 +158,8 @@ function ParentDashboard({ onClose }) {
     setNotice('');
     try {
       const response = await fetch('/api/history/export', {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        headers: accountMode ? {} : { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
         const data = await response.json();
@@ -152,8 +186,22 @@ function ParentDashboard({ onClose }) {
         <div className="parent-heading">
           <span className="parent-icon" aria-hidden="true">🔒</span>
           <h2>Parent Area</h2>
-          <p>Enter the parent PIN to view learning history.</p>
+          <p>Sign in with a parent account or use the local prototype PIN.</p>
         </div>
+        <form onSubmit={submitAccount} className="pin-form">
+          <label htmlFor="parent-email">Parent email</label>
+          <input id="parent-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <label htmlFor="parent-password">Password</label>
+          <input id="parent-password" type="password" minLength="8" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          {error && <p id="parent-error" className="parent-error" role="alert">{error}</p>}
+          <button type="submit" className="parent-primary-button">
+            {isRegistering ? 'Create parent account' : 'Sign in'}
+          </button>
+          <button type="button" className="parent-link-button" onClick={() => setIsRegistering((current) => !current)}>
+            {isRegistering ? 'Already have an account? Sign in' : 'Create a new parent account'}
+          </button>
+        </form>
+        <div className="parent-divider">or use local prototype PIN</div>
         <form onSubmit={unlock} className="pin-form">
           <label htmlFor="parent-pin">Parent PIN</label>
           <input

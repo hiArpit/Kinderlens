@@ -12,6 +12,8 @@ const historyRoutes = require('./routes/history');
 app.use('/api/history', historyRoutes);
 const parentRoutes = require('./routes/parent');
 app.use('/api/parent', parentRoutes);
+const accountRoutes = require('./routes/account');
+app.use('/api/account', accountRoutes);
 const wonderListRoutes = require('./routes/wonderList');
 app.use('/api/wonder-list', wonderListRoutes);
 const quizRoutes = require('./routes/quiz');

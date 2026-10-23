@@ -2,6 +2,18 @@ const mongoose = require('mongoose');
 
 const interactionLogSchema = new mongoose.Schema(
   {
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Parent',
+      default: null,
+      index: true,
+    },
+    childProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ChildProfile',
+      default: null,
+      index: true,
+    },
     outcome: {
       type: String,
       enum: ['identified', 'unidentified', 'unsafe', 'quiz', 'story'],

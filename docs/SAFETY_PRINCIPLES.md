@@ -18,3 +18,5 @@
    show a friendly recovery message and must not become invented content.
 9. **Parent data controls are explicit.** History export and deletion require
    parent authentication and destructive actions require confirmation.
+10. **Account boundaries are explicit.** Account-authenticated history is scoped
+    to the signed parent identity, and child profiles belong to that parent.

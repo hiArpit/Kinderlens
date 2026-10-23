@@ -70,3 +70,9 @@ running AI service or MongoDB instance.
 Parent-authenticated history now supports JSON export, deletion of one entry,
 and deletion of all entries. The dashboard confirms destructive actions before
 making the request.
+
+## Parent accounts
+
+Local parent accounts now support password hashing, signed HttpOnly session
+cookies, and protected child-profile creation/listing endpoints. The shared
+PIN remains as a local prototype fallback while account migration is tested.
