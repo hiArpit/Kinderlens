@@ -40,3 +40,16 @@ Before merging `develop` into `main`, manually verify:
 - Add rate limiting, secure deployment, and stronger session controls.
 - Add deletion/export controls and privacy review.
 - Expand automated end-to-end and adversarial evaluation coverage.
+
+## Evaluation harness
+
+Run the seeded AI-service evaluations with:
+
+```bash
+python evaluation/run_evals.py
+```
+
+Use `--strict` when image fixtures have been added; this treats image-dependent
+cases without fixtures as failures instead of skips. The current seeded
+`unsafe-item` and `ambiguous-book-diary` cases are reported as skipped because
+the repository does not contain safe test image fixtures.

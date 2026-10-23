@@ -61,7 +61,7 @@ export default function App() {
             </select>
           </div>
           <WonderList onExplore={handleUploadSuccess} language={language} />
-          <Quiz review />
+          <Quiz review language={language} />
           <PhotoCapture onUploadSuccess={handleUploadSuccess} language={language} />
         </>
       ) : (
@@ -130,7 +130,7 @@ export default function App() {
                   <span>Reading: Grade {result.readability.grade_level}</span>
                 )}
               </div>
-              <Quiz objectName={result.objectName} />
+              <Quiz objectName={result.objectName} language={result.language || language} />
               <Story objectName={result.objectName} language={result.language || language} />
             </>
           ) : (

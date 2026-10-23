@@ -49,6 +49,7 @@ class QuizResponse(BaseModel):
     is_safe: bool = True
     confidence_note: Optional[str] = None
     error: Optional[str] = None
+    language: str = "english"
 
 class StoryResponse(BaseModel):
     success: bool

@@ -49,7 +49,7 @@ async def create_quiz(payload: dict):
         raise HTTPException(status_code=400, detail="Object name is required.")
     if question_count not in ALLOWED_QUESTION_COUNTS:
         raise HTTPException(status_code=400, detail="Question count must be 3, 5, or 10.")
-    return generate_quiz(object_name.strip(), question_count)
+    return generate_quiz(object_name.strip(), question_count, payload.get("language", "english"))
 
 
 @app.post("/api/quiz/review", response_model=QuizResponse)
@@ -60,7 +60,7 @@ async def create_review_quiz(payload: dict):
         raise HTTPException(status_code=400, detail="Object names are required.")
     if question_count not in ALLOWED_QUESTION_COUNTS:
         raise HTTPException(status_code=400, detail="Question count must be 3, 5, or 10.")
-    return generate_review_quiz(object_names, question_count)
+    return generate_review_quiz(object_names, question_count, payload.get("language", "english"))
 
 
 @app.post("/api/story", response_model=StoryResponse)

@@ -11,6 +11,7 @@ router.post('/', async (req, res) => {
     ? req.body.object_name.trim()
     : '';
   const questionCount = Number(req.body?.question_count || 3);
+  const language = typeof req.body?.language === 'string' ? req.body.language : 'english';
 
   if (!objectName) {
     return res.status(400).json({
@@ -28,7 +29,7 @@ router.post('/', async (req, res) => {
   try {
     const aiResponse = await axios.post(
       `${AI_SERVICE_URL}/api/quiz`,
-      { object_name: objectName, question_count: questionCount },
+      { object_name: objectName, question_count: questionCount, language },
       { timeout: 15000 }
     );
     const data = aiResponse.data;
@@ -61,6 +62,7 @@ router.post('/', async (req, res) => {
       quiz: {
         questionCount: data.questions.length,
       },
+      language: data.language || language,
     });
 
     return res.status(200).json({
@@ -70,6 +72,7 @@ router.post('/', async (req, res) => {
       objectName: data.object_name,
       questions: data.questions,
       grounding: data.grounding,
+      language: data.language || language,
     });
   } catch (error) {
     console.error('Error generating quiz:', error.message);
@@ -83,6 +86,7 @@ router.post('/', async (req, res) => {
 router.post('/review', async (req, res) => {
   try {
     const questionCount = Number(req.body?.question_count || 3);
+    const language = typeof req.body?.language === 'string' ? req.body.language : 'english';
     if (!ALLOWED_QUESTION_COUNTS.has(questionCount)) {
       return res.status(400).json({
         error: 'INVALID_QUESTION_COUNT',
@@ -97,7 +101,7 @@ router.post('/review', async (req, res) => {
 
     const aiResponse = await axios.post(
       `${AI_SERVICE_URL}/api/quiz/review`,
-      { object_names: objectNames, question_count: questionCount },
+      { object_names: objectNames, question_count: questionCount, language },
       { timeout: 30000 }
     );
     const data = aiResponse.data;
@@ -119,6 +123,7 @@ router.post('/review', async (req, res) => {
       objectName: 'Review Quiz',
       grounding: { grounded: true, sourceTitle: 'Verified object references' },
       quiz: { questionCount: data.questions.length },
+      language: data.language || language,
     });
 
     return res.status(200).json({
@@ -128,6 +133,7 @@ router.post('/review', async (req, res) => {
       objectNames: data.object_names,
       questions: data.questions,
       groundingSources: data.grounding_sources,
+      language: data.language || language,
     });
   } catch (error) {
     console.error('Error generating review quiz:', error.message);

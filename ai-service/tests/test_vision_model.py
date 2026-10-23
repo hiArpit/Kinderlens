@@ -136,6 +136,28 @@ class VisionModelTests(unittest.TestCase):
 
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
+    def test_quiz_passes_selected_language(self, create, fetch_grounding):
+        create.return_value = completion({
+            "questions": [
+                {"question": "किताब में क्या होता है?", "options": ["पन्ने", "पंख", "पहिए"], "answer": 0, "explanation": "किताब में पन्ने होते हैं।"},
+                {"question": "किताब क्या साझा कर सकती है?", "options": ["विचार", "बारिश", "धुआँ"], "answer": 0, "explanation": "किताबें विचार साझा कर सकती हैं।"},
+                {"question": "किताब में क्या हो सकता है?", "options": ["चित्र", "इंजन", "जड़ें"], "answer": 0, "explanation": "कुछ किताबों में चित्र होते हैं।"},
+            ]
+        })
+        fetch_grounding.return_value = {
+            "grounded": True,
+            "source_title": "Book",
+            "source_url": "https://en.wikipedia.org/wiki/Book",
+            "extract": "A book is a set of pages with words or pictures.",
+        }
+
+        result = vision_model.generate_quiz("Book", 3, "hindi")
+
+        self.assertEqual(result["language"], "hindi")
+        self.assertIn("Devanagari", create.call_args.kwargs["messages"][0]["content"])
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
     def test_named_object_explanation_uses_grounding(self, create, fetch_grounding):
         create.return_value = completion({
             "kid_summary": "The Moon is Earth's natural satellite. It goes around Earth.",

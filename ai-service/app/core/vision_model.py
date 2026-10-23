@@ -257,8 +257,9 @@ def generate_story(object_name: str, language: str = "english") -> dict:
         }
 
 
-def generate_quiz(object_name: str, question_count: int = 3) -> dict:
+def generate_quiz(object_name: str, question_count: int = 3, language: str = "english") -> dict:
     try:
+        language = normalize_language(language)
         if question_count not in ALLOWED_QUESTION_COUNTS:
             raise ValueError("Question count must be 3, 5, or 10.")
         grounding_info = fetch_grounding_text(object_name)
@@ -272,13 +273,14 @@ def generate_quiz(object_name: str, question_count: int = 3) -> dict:
                 "is_safe": True,
                 "confidence_note": "I could not find enough trusted information to make a quiz yet.",
                 "error": None,
+                "language": language,
             }
 
         prompt = QUIZ_PROMPT.format(
             object_name=object_name,
             reference_text=grounding_info["extract"],
             question_count=question_count,
-        )
+        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
         completion_result = client.chat.completions.create(
             model=VISION_MODEL,
             messages=[{"role": "user", "content": prompt}],
@@ -331,6 +333,7 @@ def generate_quiz(object_name: str, question_count: int = 3) -> dict:
                 "is_safe": False,
                 "confidence_note": "Quiz content was blocked by the safety gate.",
                 "error": "; ".join(violations),
+                "language": language,
             }
 
         return {
@@ -346,6 +349,7 @@ def generate_quiz(object_name: str, question_count: int = 3) -> dict:
             "is_safe": True,
             "confidence_note": None,
             "error": None,
+            "language": language,
         }
     except Exception as error:
         logger.exception("Quiz generation failed")
@@ -358,11 +362,17 @@ def generate_quiz(object_name: str, question_count: int = 3) -> dict:
             "is_safe": True,
             "confidence_note": None,
             "error": str(error),
+            "language": language,
         }
 
 
-def generate_review_quiz(object_names: list[str], question_count: int = 3) -> dict:
+def generate_review_quiz(
+    object_names: list[str],
+    question_count: int = 3,
+    language: str = "english",
+) -> dict:
     try:
+        language = normalize_language(language)
         if question_count not in ALLOWED_QUESTION_COUNTS:
             raise ValueError("Question count must be 3, 5, or 10.")
         unique_names = list(dict.fromkeys(name.strip() for name in object_names if isinstance(name, str) and name.strip()))
@@ -371,6 +381,7 @@ def generate_review_quiz(object_names: list[str], question_count: int = 3) -> di
                 "success": True, "object_names": [], "questions": [],
                 "grounding_sources": [], "is_safe": True,
                 "confidence_note": "Explore an item first to start a review quiz.", "error": None,
+                "language": language,
             }
 
         references = []
@@ -382,6 +393,7 @@ def generate_review_quiz(object_names: list[str], question_count: int = 3) -> di
                     "success": True, "object_names": [], "questions": [],
                     "grounding_sources": [], "is_safe": True,
                     "confidence_note": "A trusted review quiz is not available yet.", "error": None,
+                    "language": language,
                 }
             references.append(f"ABOUT {name}:\n{grounding_info['extract']}")
             grounding_sources.append({
@@ -395,7 +407,7 @@ def generate_review_quiz(object_names: list[str], question_count: int = 3) -> di
             messages=[{"role": "user", "content": REVIEW_QUIZ_PROMPT.format(
                 reference_text="\n\n".join(references),
                 question_count=question_count,
-            )}],
+            ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"}],
             response_format={"type": "json_object"},
             max_tokens=600,
             temperature=0.1,
@@ -435,12 +447,14 @@ def generate_review_quiz(object_names: list[str], question_count: int = 3) -> di
                 "grounding_sources": [], "is_safe": False,
                 "confidence_note": "Review quiz content was blocked by the safety gate.",
                 "error": "; ".join(violations),
+                "language": language,
             }
 
         return {
             "success": True, "object_names": unique_names, "questions": normalized,
             "grounding_sources": grounding_sources, "is_safe": True,
             "confidence_note": None, "error": None,
+            "language": language,
         }
     except Exception as error:
         logger.exception("Review quiz generation failed")
@@ -448,6 +462,7 @@ def generate_review_quiz(object_names: list[str], question_count: int = 3) -> di
             "success": False, "object_names": [], "questions": [],
             "grounding_sources": [], "is_safe": True,
             "confidence_note": None, "error": str(error),
+            "language": language,
         }
 
 
