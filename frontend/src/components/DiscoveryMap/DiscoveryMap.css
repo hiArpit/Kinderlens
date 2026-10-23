@@ -46,7 +46,7 @@
 }
 
 .map-canvas {
-  height: 250px;
+  height: 235px;
   margin: 0.6rem auto 0;
   max-width: 640px;
   position: relative;
@@ -87,14 +87,14 @@
   background: #fff2d9;
   border-color: #e7a24a;
   left: 50%;
-  top: 42%;
+  top: 32%;
   transform: translate(-50%, -50%);
   width: 140px;
 }
 
 .map-node-1 { left: 1%; top: 7%; }
 .map-node-2 { right: 1%; top: 7%; }
-.map-node-3 { bottom: 1%; left: 50%; transform: translateX(-50%); }
+.map-node-3 { bottom: 0; left: 50%; transform: translateX(-50%); }
 
 .map-line {
   background: #f0c88f;
@@ -132,7 +132,7 @@
 }
 
 @media (max-width: 520px) {
-  .map-canvas { height: 300px; }
+  .map-canvas { height: 285px; }
   .map-node { width: 112px; }
   .map-node-1 { left: 0; }
   .map-node-2 { right: 0; }

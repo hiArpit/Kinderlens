@@ -5,6 +5,7 @@
   border-radius: 20px;
   box-shadow: 0 10px 24px rgba(91, 33, 182, 0.08);
   padding: 1.1rem;
+  width: 100%;
 }
 
 .quiz-heading {
@@ -48,6 +49,10 @@
   gap: 0.5rem;
   align-items: center;
   margin-top: 0.75rem;
+}
+
+.quiz-start .quiz-primary-button {
+  min-width: 10rem;
 }
 
 .quiz-start label {
