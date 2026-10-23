@@ -1,6 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import './WonderList.css';
 
+async function readJsonResponse(response, fallbackMessage) {
+  const body = await response.text();
+  if (!body.trim()) {
+    throw new Error(fallbackMessage);
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+}
+
 export default function WonderList({ onExplore, language = 'english' }) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
@@ -9,7 +22,7 @@ export default function WonderList({ onExplore, language = 'english' }) {
   useEffect(() => {
     fetch('/api/wonder-list')
       .then(async (response) => {
-        const data = await response.json();
+        const data = await readJsonResponse(response, 'Discoveries are still loading. Please try again.');
         if (!response.ok) throw new Error(data.message || 'Could not load discoveries.');
         setItems(data.items || []);
       })
@@ -25,7 +38,10 @@ export default function WonderList({ onExplore, language = 'english' }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(
+        response,
+        'This discovery is still loading. Please restart the backend and try again.'
+      );
       if (!response.ok) throw new Error(data.message || 'Could not explore this item.');
       onExplore(data);
     } catch (exploreError) {
