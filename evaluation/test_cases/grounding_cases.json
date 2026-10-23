@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "grounded-moon",
+    "object_name": "Moon",
+    "grounding_available": true,
+    "expected": "generates_explanation_quiz_story"
+  },
+  {
+    "id": "grounded-telescope",
+    "object_name": "Telescope",
+    "grounding_available": true,
+    "expected": "includes_verified_source"
+  },
+  {
+    "id": "missing-reference",
+    "object_name": "Unknown object",
+    "grounding_available": false,
+    "expected": "does_not_synthesize"
+  }
+]

@@ -32,7 +32,14 @@ def fetch_grounding_text(query: str) -> Dict[str, Optional[str]]:
         }
 
     # Fetch top introductory sections (first 1000 characters is ideal for grounding)
-    summary_text = page.summary[:1200] if page.summary else page.text[:1200]
+    summary_text = (page.summary or page.text or "").strip()[:1200]
+    if not summary_text:
+        return {
+            "grounded": False,
+            "source_title": None,
+            "source_url": None,
+            "extract": None
+        }
 
     return {
         "grounded": True,

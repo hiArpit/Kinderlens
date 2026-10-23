@@ -1,0 +1,157 @@
+import React, { useState } from 'react';
+import './Quiz.css';
+
+async function readJsonResponse(response, fallbackMessage) {
+  const body = await response.text();
+  if (!body.trim()) {
+    throw new Error(fallbackMessage);
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+}
+
+export default function Quiz({ objectName, review = false }) {
+  const [questions, setQuestions] = useState(null);
+  const [quizId, setQuizId] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [score, setScore] = useState(null);
+  const [questionCount, setQuestionCount] = useState(3);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const startQuiz = async () => {
+    setIsLoading(true);
+    setError('');
+    setScore(null);
+    setAnswers({});
+    try {
+      const response = await fetch(review ? '/api/quiz/review' : '/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...(review ? {} : { object_name: objectName }),
+          question_count: questionCount,
+        }),
+      });
+      const data = await readJsonResponse(response, 'The quiz service returned an empty response. Please restart the backend and try again.');
+      if (!response.ok) throw new Error(data.message || 'Could not make a quiz.');
+      if (!data.available) throw new Error(data.message || 'A quiz is not available yet.');
+      setQuestions(data.questions || []);
+      setQuizId(data.quizId);
+    } catch (quizError) {
+      setError(quizError.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitQuiz = async (event) => {
+    event.preventDefault();
+    if (!questions || Object.keys(answers).length !== questions.length) {
+      setError('Choose an answer for each question first.');
+      return;
+    }
+    const result = questions.reduce(
+      (total, question, index) => total + (answers[index] === question.answer ? 1 : 0),
+      0
+    );
+    try {
+      const response = await fetch(`/api/quiz/${quizId}/score`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score: result }),
+      });
+      const data = await readJsonResponse(response, 'The quiz result service returned an empty response. Please try again.');
+      if (!response.ok) throw new Error(data.message || 'Could not save your quiz result.');
+      setScore(result);
+    } catch (scoreError) {
+      setError(scoreError.message);
+    }
+  };
+
+  return (
+    <section className="quiz-card" aria-labelledby="quiz-heading">
+      <div className="quiz-heading">
+        <span aria-hidden="true">🧠</span>
+        <div>
+          <h3 id="quiz-heading">Quick quiz</h3>
+          <p>{review ? 'See what you remember from your discoveries.' : `See what you remember about ${objectName}.`}</p>
+        </div>
+      </div>
+
+      {!questions && (
+        <div className="quiz-start">
+          <label htmlFor={`quiz-count-${review ? 'review' : objectName}`}>Number of questions</label>
+          <select
+            id={`quiz-count-${review ? 'review' : objectName}`}
+            value={questionCount}
+            onChange={(event) => setQuestionCount(Number(event.target.value))}
+          >
+            <option value={3}>3 questions</option>
+            <option value={5}>5 questions</option>
+            <option value={10}>10 questions</option>
+          </select>
+          <button type="button" className="quiz-primary-button" onClick={startQuiz} disabled={isLoading}>
+            {isLoading ? 'Making your quiz...' : review ? 'Start review quiz' : 'Start quiz'}
+          </button>
+        </div>
+      )}
+
+      {error && <p className="quiz-error" role="alert">{error}</p>}
+
+      {questions && score === null && (
+        <form onSubmit={submitQuiz}>
+          {questions.map((question, questionIndex) => (
+            <fieldset className="quiz-question" key={question.question}>
+              <legend>{questionIndex + 1}. {question.question}</legend>
+              {question.options.map((option, optionIndex) => (
+                <label key={option}>
+                  <input
+                    type="radio"
+                    name={`question-${questionIndex}`}
+                    checked={answers[questionIndex] === optionIndex}
+                    onChange={() => setAnswers({ ...answers, [questionIndex]: optionIndex })}
+                  />
+                  {option}
+                </label>
+              ))}
+            </fieldset>
+          ))}
+          <button type="submit" className="quiz-primary-button">Check answers</button>
+        </form>
+      )}
+
+      {score !== null && (
+        <div className="quiz-result">
+          <strong>You got {score} out of {questions.length}!</strong>
+          <p>{score === questions.length ? 'Amazing remembering!' : 'Nice try. Keep exploring and learning!'}</p>
+          <div className="quiz-review" aria-label="Answer review">
+            <h4>Let&apos;s review</h4>
+            {questions.map((question, questionIndex) => {
+              const selectedAnswer = answers[questionIndex];
+              const isCorrect = selectedAnswer === question.answer;
+              return (
+                <div className={`quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`} key={question.question}>
+                  <strong>{questionIndex + 1}. {question.question}</strong>
+                  <span className={`quiz-result-label ${isCorrect ? 'correct-label' : 'incorrect-label'}`}>
+                    {isCorrect ? 'Correct!' : "Let's learn this one"}
+                  </span>
+                  {!isCorrect && (
+                    <p>Your answer: {question.options[selectedAnswer]}</p>
+                  )}
+                  <p><b>Right answer:</b> {question.options[question.answer]}</p>
+                  <p><b>Why:</b> {question.explanation}</p>
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" className="quiz-secondary-button" onClick={startQuiz}>Try another quiz</button>
+        </div>
+      )}
+    </section>
+  );
+}

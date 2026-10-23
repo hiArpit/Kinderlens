@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
 import PhotoCapture from './components/Capture/PhotoCapture';
+import ParentDashboard from './components/Parent/ParentDashboard';
+import WonderList from './components/WonderList/WonderList';
+import Quiz from './components/Quiz/Quiz';
+import Story from './components/Story/Story';
+import VocabularyText from './components/Vocabulary/VocabularyText';
 
 export default function App() {
   const [result, setResult] = useState(null);
+  const [showParentDashboard, setShowParentDashboard] = useState(false);
+  const [language, setLanguage] = useState('english');
 
   const handleUploadSuccess = (data) => {
     setResult(data);
@@ -12,6 +19,14 @@ export default function App() {
     setResult(null);
   };
 
+  if (showParentDashboard) {
+    return (
+      <main style={{ minHeight: '100vh', padding: '1.5rem' }}>
+        <ParentDashboard onClose={() => setShowParentDashboard(false)} />
+      </main>
+    );
+  }
+
   return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem' }}>
       <header style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -19,10 +34,36 @@ export default function App() {
         <p style={{ fontSize: '1.1rem', color: '#4b5563', margin: '0.25rem 0 0 0' }}>
           Point, snap, and discover!
         </p>
+        <button
+          type="button"
+          onClick={() => setShowParentDashboard(true)}
+          style={{ background: 'none', border: 0, color: '#475569', cursor: 'pointer', marginTop: '0.75rem' }}
+        >
+          Parent area
+        </button>
       </header>
 
       {!result ? (
-        <PhotoCapture onUploadSuccess={handleUploadSuccess} />
+        <>
+          <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+            <label htmlFor="language-select" style={{ color: '#1e3a8a', fontWeight: 700, marginRight: '0.5rem' }}>
+              Language
+            </label>
+            <select
+              id="language-select"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+              style={{ border: '1px solid #93c5fd', borderRadius: '8px', padding: '0.45rem', color: '#1e3a8a' }}
+            >
+              <option value="english">English</option>
+              <option value="hindi">हिंदी</option>
+              <option value="hinglish">Hinglish</option>
+            </select>
+          </div>
+          <WonderList onExplore={handleUploadSuccess} language={language} />
+          <Quiz review />
+          <PhotoCapture onUploadSuccess={handleUploadSuccess} language={language} />
+        </>
       ) : (
         <div style={{
           backgroundColor: '#ffffff',
@@ -47,7 +88,7 @@ export default function App() {
               {/* Kid-Calibrated Summary */}
               <div style={{ backgroundColor: '#eff6ff', borderRadius: '16px', padding: '1rem' }}>
                 <p style={{ color: '#1e40af', fontSize: '1.15rem', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>
-                  {result.kidSummary}
+                  <VocabularyText text={result.kidSummary} vocabulary={result.vocabulary} />
                 </p>
               </div>
 
@@ -58,7 +99,7 @@ export default function App() {
                     🌟 Fun Fact:
                   </span>
                   <p style={{ color: '#78350f', fontSize: '1.05rem', margin: 0, lineHeight: '1.4' }}>
-                    {result.funFact}
+                    <VocabularyText text={result.funFact} vocabulary={result.vocabulary} />
                   </p>
                 </div>
               )}
@@ -89,6 +130,8 @@ export default function App() {
                   <span>Reading: Grade {result.readability.grade_level}</span>
                 )}
               </div>
+              <Quiz objectName={result.objectName} />
+              <Story objectName={result.objectName} language={result.language || language} />
             </>
           ) : (
             <div style={{ textAlign: 'center' }}>

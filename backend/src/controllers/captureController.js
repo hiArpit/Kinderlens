@@ -1,7 +1,39 @@
 const axios = require('axios');
 const FormData = require('form-data');
+const InteractionLog = require('../models/InteractionLog');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+const saveInteraction = async (data) => {
+  const outcome = data.is_safe === false
+    ? 'unsafe'
+    : data.identified
+      ? 'identified'
+      : 'unidentified';
+
+  await InteractionLog.create({
+    outcome,
+    language: data.language || req.body.language || 'english',
+    objectName: data.object_name,
+    kidSummary: data.kid_summary,
+    funFact: data.fun_fact,
+    actionPrompt: data.action_prompt,
+    vocabulary: data.vocabulary || [],
+    readability: data.readability && {
+      gradeLevel: data.readability.grade_level,
+      readingEase: data.readability.reading_ease,
+      ageAppropriate: data.readability.age_appropriate,
+    },
+    grounding: data.grounding && {
+      grounded: data.grounding.grounded,
+      sourceTitle: data.grounding.source_title,
+      sourceUrl: data.grounding.source_url,
+    },
+    confidenceNote: data.confidence_note,
+    possibleObjects: data.possible_objects || [],
+    needsClearerImage: data.needs_clearer_image || false,
+  });
+};
 
 const handlePhotoUpload = async (req, res) => {
   try {
@@ -17,15 +49,27 @@ const handlePhotoUpload = async (req, res) => {
       filename: req.file.originalname || 'capture.jpg',
       contentType: req.file.mimetype,
     });
+    form.append('language', req.body.language || 'english');
 
     const aiResponse = await axios.post(`${AI_SERVICE_URL}/api/vision/recognize`, form, {
       headers: {
         ...form.getHeaders(),
+        'x-kinderlens-language': req.body.language || 'english',
       },
       timeout: 15000,
     });
 
     const data = aiResponse.data;
+
+    if (!data.success) {
+      console.error('AI service analysis failed:', data.error || 'Unknown vision error');
+      return res.status(502).json({
+        error: 'AI_SERVICE_ANALYSIS_ERROR',
+        message: 'Could not analyze this item right now. Please try again.',
+      });
+    }
+
+    await saveInteraction(data);
 
     // Safety gate triggered
     if (!data.is_safe) {
@@ -44,8 +88,11 @@ const handlePhotoUpload = async (req, res) => {
         success: true,
         identified: false,
         isSafe: true,
-        message: "Hmm, I couldn't quite see what that was. Try holding it steady or moving to better light!",
+        message: data.confidence_note || "Hmm, I couldn't quite see what that was. Try holding it steady or moving to better light!",
         confidenceNote: data.confidence_note,
+        possibleObjects: data.possible_objects || [],
+        needsClearerImage: data.needs_clearer_image || false,
+        grounding: data.grounding,
       });
     }
 
@@ -57,6 +104,8 @@ const handlePhotoUpload = async (req, res) => {
       kidSummary: data.kid_summary,
       funFact: data.fun_fact,
       actionPrompt: data.action_prompt,
+      vocabulary: data.vocabulary || [],
+      language: data.language || req.body.language || 'english',
       readability: data.readability,
       grounding: data.grounding,
     });
