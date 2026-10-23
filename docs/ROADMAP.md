@@ -120,3 +120,9 @@ Set `NODE_ENV=production` to enable Secure account cookies, and set
 `TRUST_PROXY=true` only when the API is behind a trusted reverse proxy so
 rate-limit client IPs are resolved correctly. Use the variables documented in
 `backend/.env.example` for deployment configuration.
+
+## Deployment readiness
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for the same-origin HTTPS deployment
+contract, production environment requirements, startup validation, and the
+Android/iPhone camera checklist.
