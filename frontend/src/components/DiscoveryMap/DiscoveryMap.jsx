@@ -311,7 +311,7 @@ export default function DiscoveryMap({ objectName = '', onReset }) {
         <div>
           <span className="eyebrow">Your learning trail</span>
           <h2 id="discovery-map-heading">Discovery Map</h2>
-          <p>Every wonder can lead to another question.</p>
+          <p>Follow one related topic at a time.</p>
         </div>
         <div className="map-heading-actions">
           <span className="map-stage">Stage {topicTrail.length} of 4</span>

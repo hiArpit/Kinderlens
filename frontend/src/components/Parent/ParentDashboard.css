@@ -135,6 +135,15 @@
   gap: 1rem;
 }
 
+.parent-topbar {
+  border-bottom: 1px solid #f1dfc7;
+  padding-bottom: 1rem;
+}
+
+.parent-actions {
+  flex-wrap: wrap;
+}
+
 .parent-profile-filter {
   align-items: center;
   color: #475569;
@@ -189,7 +198,8 @@
 }
 
 .highlight-grid div {
-  background: #eff6ff;
+  background: linear-gradient(145deg, #eef8ff, #f8fbff);
+  border: 1px solid #d7e8f5;
   border-radius: 14px;
   padding: 1rem;
   text-align: center;
@@ -223,8 +233,12 @@
 
 .discovery-list li,
 .journal-list li {
-  border-bottom: 1px solid #e2e8f0;
-  padding: 1rem 0;
+  background: #fffdfa;
+  border: 1px solid #f1dfc7;
+  border-radius: 16px;
+  box-shadow: 0 5px 14px rgba(89, 63, 35, 0.05);
+  margin-bottom: 0.75rem;
+  padding: 1rem;
 }
 
 .discovery-list li div {
@@ -237,6 +251,13 @@
 .journal-list p {
   color: #334155;
   margin: 0.5rem 0 0;
+}
+
+.discovery-list li div span,
+.journal-title span {
+  color: #64748b;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .journal-title {
@@ -333,6 +354,11 @@
   padding: 0.55rem 0.75rem;
 }
 
+.parent-danger-button:hover {
+  background: #fff1f2;
+  box-shadow: 0 5px 12px rgba(185, 28, 28, 0.12);
+}
+
 .journal-list .parent-danger-button {
   margin-top: 0.75rem;
 }
@@ -348,6 +374,21 @@
   }
 
   .highlight-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .parent-actions {
+    width: 100%;
+  }
+
+  .parent-actions button {
+    flex: 1;
+  }
+
+  .discovery-list li div,
+  .journal-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
   }
 }
