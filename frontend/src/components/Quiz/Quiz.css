@@ -181,3 +181,25 @@
 .incorrect-label {
   color: #b45309;
 }
+
+@media (max-width: 520px) {
+  .quiz-card {
+    border-radius: 18px;
+    padding: 0.9rem;
+  }
+
+  .quiz-start {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quiz-start label,
+  .quiz-start select,
+  .quiz-start .quiz-primary-button {
+    width: 100%;
+  }
+
+  .quiz-start select {
+    margin-top: 0.2rem;
+  }
+}

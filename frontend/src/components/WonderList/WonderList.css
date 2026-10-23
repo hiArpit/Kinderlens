@@ -81,4 +81,13 @@
   .wonder-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .wonder-item {
+    min-height: 168px;
+    padding: 0.85rem 0.4rem;
+  }
+
+  .wonder-item strong {
+    font-size: 0.95rem;
+  }
 }

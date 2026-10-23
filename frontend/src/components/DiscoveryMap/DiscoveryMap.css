@@ -232,11 +232,53 @@ button.map-node-3:hover {
 }
 
 @media (max-width: 520px) {
-  .map-canvas { height: 285px; }
-  .map-node { width: 112px; }
-  .map-node-1 { left: 0; }
-  .map-node-2 { right: 0; }
-  .map-node-3 { bottom: 0; }
+  .discovery-map {
+    border-radius: 22px;
+    padding: 0.9rem;
+  }
+
+  .discovery-map-heading {
+    gap: 0.5rem;
+  }
+
+  .map-canvas {
+    height: 330px;
+    margin-top: 0.8rem;
+  }
+
+  .map-node {
+    width: 104px;
+  }
+
+  .map-node-center {
+    top: 50%;
+    width: 116px;
+  }
+
+  .map-node-1 {
+    left: 0;
+    top: 2%;
+  }
+
+  .map-node-2 {
+    right: 0;
+    top: 2%;
+  }
+
+  .map-node-3 {
+    bottom: 0;
+  }
+
+  .map-line-one {
+    transform: rotate(-124deg);
+  }
+
+  .map-line-two {
+    transform: rotate(-56deg);
+  }
+
   .discovery-map-footer { align-items: flex-start; flex-direction: column; }
-  .map-footer-actions { width: 100%; }
+  .map-footer-actions { flex-wrap: wrap; width: 100%; }
+  .map-reset-button,
+  .map-back-button { flex: 1; }
 }
