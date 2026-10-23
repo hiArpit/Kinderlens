@@ -51,3 +51,16 @@ python evaluation/run_evals.py
 
 Use `--strict` to treat any skipped case as a failure. The adversarial image
 cases use the checked-in fixtures under `evaluation/test_cases/fixtures`.
+
+## Backend smoke tests
+
+Run the dependency-light backend route checks with:
+
+```bash
+cd backend
+npm test
+```
+
+These checks cover health, capture validation, quiz/story request validation,
+parent authorization, and signed parent-token handling without requiring a
+running AI service or MongoDB instance.

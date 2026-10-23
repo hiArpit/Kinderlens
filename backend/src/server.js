@@ -1,33 +1,8 @@
 require('dotenv').config();
 
-const express = require('express');
-const cors = require('cors');
 const { connectDatabase } = require('./config/db');
-
-const app = express();
+const app = require('./app');
 const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
-
-// Capture routes (Phase 1, Step 1)
-const captureRoutes = require('./routes/capture');
-app.use('/api/capture', captureRoutes);
-const historyRoutes = require('./routes/history');
-app.use('/api/history', historyRoutes);
-const parentRoutes = require('./routes/parent');
-app.use('/api/parent', parentRoutes);
-const wonderListRoutes = require('./routes/wonderList');
-app.use('/api/wonder-list', wonderListRoutes);
-const quizRoutes = require('./routes/quiz');
-app.use('/api/quiz', quizRoutes);
-const storyRoutes = require('./routes/story');
-app.use('/api/story', storyRoutes);
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', service: 'kinderlens-backend' });
-});
 
 const startServer = async () => {
   await connectDatabase();
