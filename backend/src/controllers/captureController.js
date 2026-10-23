@@ -13,6 +13,7 @@ const saveInteraction = async (data) => {
 
   await InteractionLog.create({
     outcome,
+    language: data.language || req.body.language || 'english',
     objectName: data.object_name,
     kidSummary: data.kid_summary,
     funFact: data.fun_fact,
@@ -48,10 +49,12 @@ const handlePhotoUpload = async (req, res) => {
       filename: req.file.originalname || 'capture.jpg',
       contentType: req.file.mimetype,
     });
+    form.append('language', req.body.language || 'english');
 
     const aiResponse = await axios.post(`${AI_SERVICE_URL}/api/vision/recognize`, form, {
       headers: {
         ...form.getHeaders(),
+        'x-kinderlens-language': req.body.language || 'english',
       },
       timeout: 15000,
     });
@@ -102,6 +105,7 @@ const handlePhotoUpload = async (req, res) => {
       funFact: data.fun_fact,
       actionPrompt: data.action_prompt,
       vocabulary: data.vocabulary || [],
+      language: data.language || req.body.language || 'english',
       readability: data.readability,
       grounding: data.grounding,
     });

@@ -20,7 +20,7 @@ router.post('/', async (req, res) => {
   try {
     const aiResponse = await axios.post(
       `${AI_SERVICE_URL}/api/story`,
-      { object_name: objectName },
+      { object_name: objectName, language: req.body.language || 'english' },
       { timeout: 20000 }
     );
     const data = aiResponse.data;
@@ -43,6 +43,7 @@ router.post('/', async (req, res) => {
     const historyEntry = await InteractionLog.create({
       outcome: 'story',
       activityType: 'story',
+      language: data.language || req.body.language || 'english',
       objectName: data.object_name,
       grounding: {
         grounded: data.grounding.grounded,
@@ -63,6 +64,7 @@ router.post('/', async (req, res) => {
       title: data.title,
       paragraphs: data.paragraphs,
       vocabulary: data.vocabulary || [],
+      language: data.language || req.body.language || 'english',
       grounding: data.grounding,
     });
   } catch (error) {

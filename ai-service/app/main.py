@@ -28,7 +28,8 @@ async def recognize_object(file: UploadFile = File(...)):
     if len(image_bytes) == 0:
         raise HTTPException(status_code=400, detail="Image file is empty.")
 
-    result = analyze_image_buffer(image_bytes=image_bytes, mime_type=file.content_type)
+    language = file.headers.get("x-kinderlens-language", "english")
+    result = analyze_image_buffer(image_bytes=image_bytes, mime_type=file.content_type, language=language)
     return result
 
 
@@ -37,7 +38,7 @@ async def explain_object(payload: dict):
     object_name = payload.get("object_name") if isinstance(payload, dict) else None
     if not isinstance(object_name, str) or not object_name.strip():
         raise HTTPException(status_code=400, detail="Object name is required.")
-    return explain_object_name(object_name.strip())
+    return explain_object_name(object_name.strip(), payload.get("language", "english"))
 
 
 @app.post("/api/quiz", response_model=QuizResponse)
@@ -67,4 +68,4 @@ async def create_story(payload: dict):
     object_name = payload.get("object_name") if isinstance(payload, dict) else None
     if not isinstance(object_name, str) or not object_name.strip():
         raise HTTPException(status_code=400, detail="Object name is required.")
-    return generate_story(object_name.strip())
+    return generate_story(object_name.strip(), payload.get("language", "english"))

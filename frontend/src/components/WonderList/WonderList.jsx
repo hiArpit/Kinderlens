@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './WonderList.css';
 
-export default function WonderList({ onExplore }) {
+export default function WonderList({ onExplore, language = 'english' }) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [loadingSlug, setLoadingSlug] = useState('');
@@ -22,6 +22,8 @@ export default function WonderList({ onExplore }) {
     try {
       const response = await fetch(`/api/wonder-list/${item.slug}/explore`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Could not explore this item.');
