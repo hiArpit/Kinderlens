@@ -86,7 +86,15 @@
   }
 
   .viewfinder-box {
-    min-height: 180px;
+    aspect-ratio: 3 / 2;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .video-preview,
+  .image-preview {
+    height: 100%;
+    max-height: none;
   }
 
   .button-group {
