@@ -20,7 +20,7 @@ router.post('/:slug/explore', async (req, res) => {
     const aiResponse = await axios.post(
       `${AI_SERVICE_URL}/api/explain/object`,
       { object_name: item.name, language: req.body.language || 'english' },
-      { timeout: 15000 }
+      { timeout: 30000 }
     );
     const data = aiResponse.data;
 
