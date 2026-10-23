@@ -70,6 +70,23 @@ RULES:
 Return ONLY valid JSON.
 """
 
+SIMPLIFY_EXPLANATION_PROMPT = """Rewrite the explanation for a child aged 6 to 8.
+Use only the verified facts below. Keep every sentence short.
+Use common words, no more than 8 words per sentence, and avoid science terms
+unless the reference explains them in simple words. Do not add facts.
+
+OBJECT: {object_name}
+VERIFIED FACTS:
+{reference_text}
+
+Return ONLY JSON with:
+{{
+  "kid_summary": "2 very short simple sentences.",
+  "fun_fact": "1 short fact.",
+  "action_prompt": "1 safe observation activity."
+}}
+"""
+
 
 def evaluate_readability(text: str) -> dict:
     if not text:
@@ -80,6 +97,36 @@ def evaluate_readability(text: str) -> dict:
         "grade_level": round(grade, 1),
         "reading_ease": round(ease, 1),
         "age_appropriate": grade <= MAX_CHILD_GRADE_LEVEL
+    }
+
+
+def simplify_explanation(object_name: str, reference_text: str) -> dict | None:
+    completion = client.chat.completions.create(
+        model=VISION_MODEL,
+        messages=[{
+            "role": "user",
+            "content": SIMPLIFY_EXPLANATION_PROMPT.format(
+                object_name=object_name,
+                reference_text=reference_text
+            )
+        }],
+        response_format={"type": "json_object"},
+        max_tokens=220,
+        temperature=0.1
+    )
+    parsed = json.loads(completion.choices[0].message.content.strip())
+    kid_summary = parsed.get("kid_summary", "")
+    fun_fact = parsed.get("fun_fact", "")
+    action_prompt = parsed.get("action_prompt", "")
+    is_safe, violations = inspect_safety_completion([kid_summary, fun_fact, action_prompt])
+    readability = evaluate_readability(f"{kid_summary} {fun_fact}")
+    return {
+        "kid_summary": kid_summary,
+        "fun_fact": fun_fact,
+        "action_prompt": action_prompt,
+        "is_safe": is_safe,
+        "violations": violations,
+        "readability": readability,
     }
 
 
@@ -137,20 +184,27 @@ def explain_object_name(object_name: str) -> dict:
 
         readability = evaluate_readability(f"{kid_summary} {fun_fact}")
         if not readability["age_appropriate"]:
-            return {
-                "success": True,
-                "identified": False,
-                "is_safe": True,
-                "safety_flag_reason": None,
-                "object_name": None,
-                "kid_summary": None,
-                "fun_fact": None,
-                "action_prompt": None,
-                "readability": readability,
-                "grounding": None,
-                "confidence_note": "This explanation needs a simpler version before it is ready.",
-                "error": None,
-            }
+            simplified = simplify_explanation(object_name, grounding_info["extract"])
+            if simplified["is_safe"] and simplified["readability"]["age_appropriate"]:
+                kid_summary = simplified["kid_summary"]
+                fun_fact = simplified["fun_fact"]
+                action_prompt = simplified["action_prompt"]
+                readability = simplified["readability"]
+            else:
+                return {
+                    "success": True,
+                    "identified": False,
+                    "is_safe": True,
+                    "safety_flag_reason": None,
+                    "object_name": None,
+                    "kid_summary": None,
+                    "fun_fact": None,
+                    "action_prompt": None,
+                    "readability": simplified["readability"],
+                    "grounding": None,
+                    "confidence_note": "This explanation needs a simpler version before it is ready.",
+                    "error": None,
+                }
 
         return {
             "success": True,
@@ -363,22 +417,29 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
         combined_text = f"{kid_summary} {fun_fact}"
         readability_metrics = evaluate_readability(combined_text)
         if not readability_metrics["age_appropriate"]:
-            return {
-                "success": True,
-                "identified": False,
-                "is_safe": True,
-                "safety_flag_reason": None,
-                "object_name": None,
-                "kid_summary": None,
-                "fun_fact": None,
-                "action_prompt": None,
-                "readability": readability_metrics,
-                "grounding": None,
-                "confidence_note": "This explanation needs a simpler version before it is ready.",
-                "possible_objects": possible_objects,
-                "needs_clearer_image": False,
-                "error": None
-            }
+            simplified = simplify_explanation(object_name, ref_text)
+            if simplified["is_safe"] and simplified["readability"]["age_appropriate"]:
+                kid_summary = simplified["kid_summary"]
+                fun_fact = simplified["fun_fact"]
+                action_prompt = simplified["action_prompt"]
+                readability_metrics = simplified["readability"]
+            else:
+                return {
+                    "success": True,
+                    "identified": False,
+                    "is_safe": True,
+                    "safety_flag_reason": None,
+                    "object_name": None,
+                    "kid_summary": None,
+                    "fun_fact": None,
+                    "action_prompt": None,
+                    "readability": simplified["readability"],
+                    "grounding": None,
+                    "confidence_note": "This explanation needs a simpler version before it is ready.",
+                    "possible_objects": possible_objects,
+                    "needs_clearer_image": False,
+                    "error": None
+                }
 
         return {
             "success": True,

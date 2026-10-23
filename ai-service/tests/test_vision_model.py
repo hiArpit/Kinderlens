@@ -37,12 +37,19 @@ class VisionModelTests(unittest.TestCase):
 
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
-    def test_named_object_explanation_blocks_overage_readability(self, create, fetch_grounding):
-        create.return_value = completion({
-            "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
-            "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
-            "action_prompt": "Compare their body structures.",
-        })
+    def test_named_object_explanation_simplifies_overage_readability(self, create, fetch_grounding):
+        create.side_effect = [
+            completion({
+                "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
+                "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
+                "action_prompt": "Compare their body structures.",
+            }),
+            completion({
+                "kid_summary": "Dinosaurs were small. Birds came from them.",
+                "fun_fact": "Some dinosaurs had feathers.",
+                "action_prompt": "Look for dinosaur shapes in books.",
+            }),
+        ]
         fetch_grounding.return_value = {
             "grounded": True,
             "source_title": "Dinosaur",
@@ -53,9 +60,9 @@ class VisionModelTests(unittest.TestCase):
         result = vision_model.explain_object_name("Dinosaur")
 
         self.assertTrue(result["success"])
-        self.assertFalse(result["identified"])
-        self.assertFalse(result["readability"]["age_appropriate"])
-        self.assertIn("simpler version", result["confidence_note"])
+        self.assertTrue(result["identified"])
+        self.assertTrue(result["readability"]["age_appropriate"])
+        self.assertEqual(create.call_count, 2)
 
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
