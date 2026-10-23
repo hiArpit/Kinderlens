@@ -229,6 +229,7 @@ def generate_story(object_name: str, language: str = "english") -> dict:
                 "grounding": None, "is_safe": False,
                 "confidence_note": "Story content was blocked by the safety gate.",
                 "error": "; ".join(violations),
+                "language": language,
             }
 
         return {
@@ -245,6 +246,7 @@ def generate_story(object_name: str, language: str = "english") -> dict:
             "is_safe": True,
             "confidence_note": None,
             "error": None,
+            "language": language,
         }
     except Exception as error:
         logger.exception("Story generation failed")
