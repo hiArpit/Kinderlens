@@ -250,11 +250,133 @@ const connections = {
   ],
 };
 
-const fallbackConnections = [
-  { icon: '🔎', label: 'Observe', detail: 'Look closely at its shape and colour' },
-  { icon: '📚', label: 'Learn', detail: 'Read a simple, trusted explanation' },
-  { icon: '✨', label: 'Wonder', detail: 'Ask a new question about it' },
-];
+const genericTopicConnections = {
+  body: [
+    { icon: '👀', label: 'Senses', detail: 'Senses help us notice the world' },
+    { icon: '🦴', label: 'Bones', detail: 'Bones support many bodies' },
+    { icon: '💪', label: 'Movement', detail: 'Body parts can help living things move' },
+  ],
+  habitat: [
+    { icon: '🌳', label: 'Home', detail: 'A habitat is a living thing’s home' },
+    { icon: '🌦️', label: 'Weather', detail: 'Weather changes what habitats are like' },
+    { icon: '🍃', label: 'Shelter', detail: 'Shelter helps living things stay safe' },
+  ],
+  needs: [
+    { icon: '💧', label: 'Water', detail: 'Living things need water' },
+    { icon: '🥕', label: 'Food', detail: 'Food gives living things energy' },
+    { icon: '🏡', label: 'Shelter', detail: 'Shelter provides a safe place to live' },
+  ],
+  travel: [
+    { icon: '🛣️', label: 'Roads', detail: 'Roads help vehicles travel across land' },
+    { icon: '🚦', label: 'Traffic', detail: 'Traffic rules help people travel safely' },
+    { icon: '🗺️', label: 'Places', detail: 'Travel connects different places' },
+  ],
+  energy: [
+    { icon: '⛽', label: 'Fuel', detail: 'Some vehicles use fuel to move' },
+    { icon: '🔋', label: 'Battery', detail: 'Some vehicles use stored electricity' },
+    { icon: '🌞', label: 'Power', detail: 'Energy makes movement possible' },
+  ],
+  growth: [
+    { icon: '🌱', label: 'Seeds', detail: 'Many plants begin as seeds' },
+    { icon: '🕰️', label: 'Time', detail: 'Growth happens over time' },
+    { icon: '🌼', label: 'Changes', detail: 'Living things change as they grow' },
+  ],
+  life: [
+    { icon: '🌎', label: 'Ecosystems', detail: 'Living things share their surroundings' },
+    { icon: '🤝', label: 'Connections', detail: 'Living things can help one another' },
+    { icon: '🔄', label: 'Cycles', detail: 'Nature has repeating life cycles' },
+  ],
+  parts: [
+    { icon: '🔍', label: 'Shape', detail: 'Notice the lines, edges, and forms' },
+    { icon: '📏', label: 'Size', detail: 'Compare how big or small it is' },
+    { icon: '⚙️', label: 'Function', detail: 'See how its parts help it work' },
+  ],
+  materials: [
+    { icon: '🪵', label: 'Wood', detail: 'A natural material from trees' },
+    { icon: '🔩', label: 'Metal', detail: 'A strong material used in many objects' },
+    { icon: '🧴', label: 'Plastic', detail: 'A light material shaped in many ways' },
+  ],
+  uses: [
+    { icon: '🏠', label: 'Home', detail: 'Ways people use it at home' },
+    { icon: '🛠️', label: 'Work', detail: 'Ways it can help people work' },
+    { icon: '🎲', label: 'Play', detail: 'Ways children can use it safely' },
+  ],
+  shape: [
+    { icon: '🔺', label: 'Patterns', detail: 'Shapes and designs can repeat' },
+    { icon: '🎨', label: 'Colours', detail: 'Colours can help us notice details' },
+    { icon: '🧩', label: 'Design', detail: 'Design shows how parts fit together' },
+  ],
+  size: [
+    { icon: '📐', label: 'Measure', detail: 'Tools can tell us its size' },
+    { icon: '⚖️', label: 'Compare', detail: 'Compare it with familiar objects' },
+    { icon: '📦', label: 'Space', detail: 'Objects need space around them' },
+  ],
+  function: [
+    { icon: '🔧', label: 'Tools', detail: 'Tools help people do jobs' },
+    { icon: '💡', label: 'Ideas', detail: 'People design things to solve problems' },
+    { icon: '🔁', label: 'Change', detail: 'Parts can move or work together' },
+  ],
+  wood: [
+    { icon: '🌳', label: 'Trees', detail: 'Wood comes from trees' },
+    { icon: '🪵', label: 'Grain', detail: 'Wood has lines called grain' },
+    { icon: '🌱', label: 'Nature', detail: 'Trees are part of living ecosystems' },
+  ],
+  metal: [
+    { icon: '⛏️', label: 'Minerals', detail: 'Metals come from minerals in Earth' },
+    { icon: '🔥', label: 'Heat', detail: 'Heat can change the shape of metal' },
+    { icon: '♻️', label: 'Recycling', detail: 'Metal can often be used again' },
+  ],
+  plastic: [
+    { icon: '🧪', label: 'Materials', detail: 'Plastic is made from special materials' },
+    { icon: '♻️', label: 'Recycling', detail: 'Some plastics can be recycled' },
+    { icon: '🌍', label: 'Environment', detail: 'We should use and dispose of it carefully' },
+  ],
+  home: [
+    { icon: '👨‍👩‍👧', label: 'People', detail: 'People use objects in different ways' },
+    { icon: '🧹', label: 'Care', detail: 'Taking care of things helps them last' },
+    { icon: '🛡️', label: 'Safety', detail: 'Use it safely with a grown-up when needed' },
+  ],
+  work: [
+    { icon: '🎯', label: 'Jobs', detail: 'Objects can help people complete jobs' },
+    { icon: '🤝', label: 'Teamwork', detail: 'People can use tools together' },
+    { icon: '✅', label: 'Results', detail: 'Tools help turn ideas into results' },
+  ],
+  play: [
+    { icon: '🎲', label: 'Games', detail: 'Games help us learn and have fun' },
+    { icon: '🎨', label: 'Creativity', detail: 'Play gives us ways to make new things' },
+    { icon: '🛡️', label: 'Safety', detail: 'Safe play keeps everyone happy' },
+  ],
+};
+
+function capturedObjectConnections(objectName) {
+  const name = objectName.toLowerCase();
+  if (/(dog|cat|bird|fish|animal|insect|bee|butterfly)/.test(name)) {
+    return [
+      { icon: '🐾', label: 'Body', detail: `Notice the body parts of the ${objectName}` },
+      { icon: '🌿', label: 'Habitat', detail: `Where a ${objectName} can live` },
+      { icon: '🍎', label: 'Needs', detail: `What a ${objectName} needs to grow` },
+    ];
+  }
+  if (/(tree|flower|plant|leaf|fruit)/.test(name)) {
+    return [
+      { icon: '🌱', label: 'Growth', detail: `How the ${objectName} changes over time` },
+      { icon: '☀️', label: 'Needs', detail: `What a ${objectName} needs to grow` },
+      { icon: '🐝', label: 'Life', detail: `How a ${objectName} connects with living things` },
+    ];
+  }
+  if (/(car|bus|bike|bicycle|train|plane|vehicle|truck)/.test(name)) {
+    return [
+      { icon: '⚙️', label: 'Parts', detail: `The pieces that help a ${objectName} move` },
+      { icon: '🛣️', label: 'Travel', detail: `Where a ${objectName} can take people` },
+      { icon: '⚡', label: 'Energy', detail: `What helps a ${objectName} move` },
+    ];
+  }
+  return [
+    { icon: '🔍', label: 'Parts', detail: `Look closely at the parts of the ${objectName}` },
+    { icon: '🧱', label: 'Materials', detail: `Discover what the ${objectName} is made from` },
+    { icon: '🛠️', label: 'Uses', detail: `Find out how people use the ${objectName}` },
+  ];
+}
 
 function slugify(value = '') {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -287,7 +409,9 @@ export default function DiscoveryMap({ objectName = '', onReset }) {
   const [topicTrail, setTopicTrail] = React.useState([startingTopic]);
   const activeTopic = topicTrail[topicTrail.length - 1];
   const title = activeTopic;
-  const related = connections[slugify(activeTopic)] || fallbackConnections;
+  const related = connections[slugify(activeTopic)]
+    || genericTopicConnections[slugify(activeTopic)]
+    || (topicTrail.length === 1 ? capturedObjectConnections(startingTopic) : genericTopicConnections.uses);
 
   const selectTopic = (label) => {
     if (label === activeTopic || topicTrail.length >= 4) return;

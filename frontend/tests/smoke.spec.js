@@ -109,3 +109,34 @@ test('discovery map progresses through four related Rainbow topics', async ({ pa
   await page.getByRole('button', { name: 'Start a new trail' }).click();
   await expect(page.getByText('Your map starts with a question')).toBeVisible();
 });
+
+test('discovery map gives a captured object a four-stage trail', async ({ page }) => {
+  await page.route('**/api/capture/upload', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        identified: true,
+        objectName: 'Chair',
+        kidSummary: 'A chair is made for sitting.',
+        language: 'english',
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'chair.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from('captured-object-fixture'),
+  });
+  await page.getByRole('button', { name: 'Explore this object' }).click();
+
+  await expect(page.getByText('Stage 1 of 4')).toBeVisible();
+  await page.getByRole('button', { name: 'Open Parts learning connection' }).click();
+  await expect(page.getByText('Stage 2 of 4')).toBeVisible();
+  await page.getByRole('button', { name: 'Open Shape learning connection' }).click();
+  await expect(page.getByText('Stage 3 of 4')).toBeVisible();
+  await page.getByRole('button', { name: 'Open Patterns learning connection' }).click();
+  await expect(page.getByText('Stage 4 of 4')).toBeVisible();
+  await expect(page.getByText('Chair → Parts → Shape → Patterns')).toBeVisible();
+});
