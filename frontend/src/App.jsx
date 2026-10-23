@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import PhotoCapture from './components/Capture/PhotoCapture';
 import ParentDashboard from './components/Parent/ParentDashboard';
 import WonderList from './components/WonderList/WonderList';
+import Quiz from './components/Quiz/Quiz';
 
 export default function App() {
   const [result, setResult] = useState(null);
@@ -42,6 +43,7 @@ export default function App() {
       {!result ? (
         <>
           <WonderList onExplore={handleUploadSuccess} />
+          <Quiz review />
           <PhotoCapture onUploadSuccess={handleUploadSuccess} />
         </>
       ) : (
@@ -110,6 +112,7 @@ export default function App() {
                   <span>Reading: Grade {result.readability.grade_level}</span>
                 )}
               </div>
+              <Quiz objectName={result.objectName} />
             </>
           ) : (
             <div style={{ textAlign: 'center' }}>

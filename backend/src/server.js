@@ -19,6 +19,8 @@ const parentRoutes = require('./routes/parent');
 app.use('/api/parent', parentRoutes);
 const wonderListRoutes = require('./routes/wonderList');
 app.use('/api/wonder-list', wonderListRoutes);
+const quizRoutes = require('./routes/quiz');
+app.use('/api/quiz', quizRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

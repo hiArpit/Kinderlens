@@ -26,3 +26,20 @@ class VisionRecognitionResponse(BaseModel):
     possible_objects: list[str] = Field(default_factory=list)
     needs_clearer_image: bool = False
     error: Optional[str] = None
+
+class QuizQuestion(BaseModel):
+    question: str
+    options: list[str] = Field(min_length=2, max_length=4)
+    answer: int = Field(ge=0, le=3)
+    explanation: str
+
+class QuizResponse(BaseModel):
+    success: bool
+    object_name: Optional[str] = None
+    object_names: list[str] = Field(default_factory=list)
+    questions: list[QuizQuestion] = Field(default_factory=list)
+    grounding: Optional[GroundingSource] = None
+    grounding_sources: list[GroundingSource] = Field(default_factory=list)
+    is_safe: bool = True
+    confidence_note: Optional[str] = None
+    error: Optional[str] = None

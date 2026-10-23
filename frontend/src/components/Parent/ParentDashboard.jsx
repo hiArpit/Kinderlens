@@ -50,6 +50,10 @@ function ParentDashboard({ onClose }) {
     () => history.filter((entry) => entry.outcome === 'unsafe'),
     [history]
   );
+  const quizzes = useMemo(
+    () => history.filter((entry) => entry.activityType === 'quiz' || entry.outcome === 'quiz'),
+    [history]
+  );
 
   const unlock = async (event) => {
     event.preventDefault();
@@ -133,6 +137,7 @@ function ParentDashboard({ onClose }) {
                 <div><strong>{identified.length}</strong><span>Objects explored</span></div>
                 <div><strong>{history.length}</strong><span>Total interactions</span></div>
                 <div><strong>{unsafe.length}</strong><span>Safety flags</span></div>
+                <div><strong>{quizzes.length}</strong><span>Quizzes started</span></div>
               </div>
               <h3>Recent discoveries</h3>
               {identified.length === 0 ? <p className="parent-muted">No identified discoveries yet.</p> : (
@@ -160,6 +165,9 @@ function ParentDashboard({ onClose }) {
                       </div>
                       <span className={`outcome outcome-${entry.outcome}`}>{entry.outcome}</span>
                       {entry.kidSummary && <p>{entry.kidSummary}</p>}
+                      {entry.activityType === 'quiz' && (
+                        <p>{entry.quiz?.questionCount || 0} grounded questions generated.</p>
+                      )}
                       {entry.grounding?.grounded && (
                         <a href={entry.grounding.sourceUrl} target="_blank" rel="noreferrer">
                           Verified via {entry.grounding.sourceTitle}
