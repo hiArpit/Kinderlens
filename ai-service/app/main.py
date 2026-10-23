@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.vision_model import analyze_image_buffer
+from app.core.vision_model import analyze_image_buffer, explain_object_name
 from app.schemas.vision import VisionRecognitionResponse
 
 app = FastAPI(title="KinderLens AI Service", version="0.1.0")
@@ -28,3 +28,11 @@ async def recognize_object(file: UploadFile = File(...)):
 
     result = analyze_image_buffer(image_bytes=image_bytes, mime_type=file.content_type)
     return result
+
+
+@app.post("/api/explain/object", response_model=VisionRecognitionResponse)
+async def explain_object(payload: dict):
+    object_name = payload.get("object_name") if isinstance(payload, dict) else None
+    if not isinstance(object_name, str) or not object_name.strip():
+        raise HTTPException(status_code=400, detail="Object name is required.")
+    return explain_object_name(object_name.strip())

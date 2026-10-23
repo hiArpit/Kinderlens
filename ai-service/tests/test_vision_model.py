@@ -15,6 +15,28 @@ def completion(payload):
 class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
+    def test_named_object_explanation_uses_grounding(self, create, fetch_grounding):
+        create.return_value = completion({
+            "kid_summary": "The Moon orbits Earth. It shines by reflected sunlight.",
+            "fun_fact": "The Moon is Earth's natural satellite.",
+            "action_prompt": "Look for the Moon tonight.",
+        })
+        fetch_grounding.return_value = {
+            "grounded": True,
+            "source_title": "Moon",
+            "source_url": "https://en.wikipedia.org/wiki/Moon",
+            "extract": "The Moon is Earth's only natural satellite.",
+        }
+
+        result = vision_model.explain_object_name("Moon")
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["identified"])
+        self.assertEqual(result["object_name"], "Moon")
+        self.assertTrue(result["grounding"]["grounded"])
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
     def test_grounding_failure_blocks_synthesis(self, create, fetch_grounding):
         create.return_value = completion({
             "is_safe": True,
