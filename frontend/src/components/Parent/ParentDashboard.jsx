@@ -26,6 +26,7 @@ function ParentDashboard({ onClose }) {
   const [notice, setNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [profiles, setProfiles] = useState([]);
+  const [selectedProfileId, setSelectedProfileId] = useState('');
   const [profileName, setProfileName] = useState('');
   const [profileAge, setProfileAge] = useState('');
 
@@ -37,7 +38,10 @@ function ParentDashboard({ onClose }) {
       setError('');
       setNotice('');
       try {
-        const response = await fetch('/api/history', {
+        const query = selectedProfileId
+          ? `?child_profile_id=${encodeURIComponent(selectedProfileId)}`
+          : '';
+        const response = await fetch(`/api/history${query}`, {
           credentials: 'include',
           headers: accountMode ? {} : { Authorization: `Bearer ${token}` },
         });
@@ -56,7 +60,7 @@ function ParentDashboard({ onClose }) {
     };
 
     loadHistory();
-  }, [token, accountMode]);
+  }, [token, accountMode, selectedProfileId]);
 
   useEffect(() => {
     if (!accountMode || !token) return;
@@ -65,6 +69,12 @@ function ParentDashboard({ onClose }) {
       .then((data) => setProfiles(data?.profiles || []))
       .catch(() => {});
   }, [accountMode, token]);
+
+  useEffect(() => {
+    if (selectedProfileId && !profiles.some((profile) => profile._id === selectedProfileId)) {
+      setSelectedProfileId('');
+    }
+  }, [profiles, selectedProfileId]);
 
   const identified = useMemo(
     () => history.filter((entry) => entry.outcome === 'identified'),
@@ -179,7 +189,10 @@ function ParentDashboard({ onClose }) {
     setError('');
     setNotice('');
     try {
-      const response = await fetch('/api/history', {
+      const query = selectedProfileId
+        ? `?child_profile_id=${encodeURIComponent(selectedProfileId)}`
+        : '';
+      const response = await fetch(`/api/history${query}`, {
         method: 'DELETE',
         credentials: 'include',
         headers: accountMode ? {} : { Authorization: `Bearer ${token}` },
@@ -197,7 +210,10 @@ function ParentDashboard({ onClose }) {
     setError('');
     setNotice('');
     try {
-      const response = await fetch('/api/history/export', {
+      const query = selectedProfileId
+        ? `?child_profile_id=${encodeURIComponent(selectedProfileId)}`
+        : '';
+      const response = await fetch(`/api/history/export${query}`, {
         credentials: 'include',
         headers: accountMode ? {} : { Authorization: `Bearer ${token}` },
       });
@@ -272,6 +288,15 @@ function ParentDashboard({ onClose }) {
         {error && <p className="parent-error" role="alert">{error}</p>}
         {notice && <p className="parent-notice" role="status">{notice}</p>}
         <div className="parent-actions">
+          {accountMode && profiles.length > 0 && (
+            <label className="parent-profile-filter">
+              View
+              <select value={selectedProfileId} onChange={(event) => setSelectedProfileId(event.target.value)}>
+                <option value="">All children</option>
+                {profiles.map((profile) => <option key={profile._id} value={profile._id}>{profile.name}</option>)}
+              </select>
+            </label>
+          )}
           <button type="button" className="parent-link-button" onClick={lock}>Lock</button>
           <button type="button" className="parent-link-button" onClick={onClose}>Child view</button>
         </div>

@@ -90,6 +90,15 @@ test('history privacy endpoints require parent authorization', async () => {
   assert.equal(deleteOneResponse.status, 401);
 });
 
+test('history child filtering requires account authorization', async () => {
+  const response = await request(app)
+    .get('/api/history?child_profile_id=507f1f77bcf86cd799439011')
+    .set('Authorization', `Bearer ${createParentToken()}`);
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.error, 'CHILD_PROFILE_FORBIDDEN');
+});
+
 test('parent auth middleware accepts a valid signed token', () => {
   const token = createParentToken();
   let nextCalled = false;
