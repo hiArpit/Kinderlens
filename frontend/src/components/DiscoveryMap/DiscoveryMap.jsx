@@ -62,6 +62,56 @@ const connections = {
     { icon: '🌬️', label: 'Weather', detail: 'Wind is part of changing weather' },
     { icon: '🪁', label: 'Kites', detail: 'Wind can make kites fly' },
   ],
+  clouds: [
+    { icon: '💧', label: 'Water', detail: 'Clouds are made of tiny drops' },
+    { icon: '🌧️', label: 'Rain', detail: 'Drops can fall from clouds' },
+    { icon: '🌬️', label: 'Wind', detail: 'Wind moves clouds across the sky' },
+  ],
+  plants: [
+    { icon: '🌱', label: 'Seeds', detail: 'New plants can grow from seeds' },
+    { icon: '☀️', label: 'Sunshine', detail: 'Plants use light to grow' },
+    { icon: '💧', label: 'Water', detail: 'Plants need water to live' },
+  ],
+  sun: [
+    { icon: '⭐', label: 'Stars', detail: 'The Sun is a nearby star' },
+    { icon: '💡', label: 'Light', detail: 'The Sun gives us light' },
+    { icon: '🔥', label: 'Heat', detail: 'The Sun warms our planet' },
+  ],
+  stars: [
+    { icon: '🌌', label: 'Space', detail: 'Stars shine across space' },
+    { icon: '☀️', label: 'Sun', detail: 'Our Sun is a star' },
+    { icon: '🔭', label: 'Telescope', detail: 'A tool for looking far away' },
+  ],
+  air: [
+    { icon: '💨', label: 'Wind', detail: 'Wind is moving air' },
+    { icon: '🫁', label: 'Breathing', detail: 'People and animals use air' },
+    { icon: '☁️', label: 'Clouds', detail: 'Air helps clouds move' },
+  ],
+  ocean: [
+    { icon: '🐠', label: 'Animals', detail: 'Many animals live in the ocean' },
+    { icon: '🌊', label: 'Waves', detail: 'Wind can move ocean water' },
+    { icon: '🧂', label: 'Salt', detail: 'Ocean water contains salt' },
+  ],
+  waves: [
+    { icon: '💨', label: 'Wind', detail: 'Wind can make waves grow' },
+    { icon: '🌊', label: 'Ocean', detail: 'Waves travel across the ocean' },
+    { icon: '🏖️', label: 'Shore', detail: 'Waves reach the shore' },
+  ],
+  fossils: [
+    { icon: '🦴', label: 'Bones', detail: 'Bones can leave fossil clues' },
+    { icon: '🪨', label: 'Rocks', detail: 'Fossils are found in rock' },
+    { icon: '⏳', label: 'History', detail: 'Fossils tell stories from long ago' },
+  ],
+  heat: [
+    { icon: '🔥', label: 'Fire', detail: 'Fire gives off heat and light' },
+    { icon: '☀️', label: 'Sun', detail: 'The Sun warms our planet' },
+    { icon: '🌋', label: 'Volcano', detail: 'Volcanoes are hot inside' },
+  ],
+  rocks: [
+    { icon: '🪨', label: 'Minerals', detail: 'Rocks are made from minerals' },
+    { icon: '🌋', label: 'Volcano', detail: 'Lava can cool into rock' },
+    { icon: '🦴', label: 'Fossils', detail: 'Some rocks hold ancient clues' },
+  ],
   volcano: [
     { icon: '🌋', label: 'Earth', detail: 'Our planet is always changing' },
     { icon: '🔥', label: 'Heat', detail: 'Deep inside Earth is very hot' },
@@ -80,17 +130,26 @@ function slugify(value = '') {
 }
 
 export default function DiscoveryMap({ objectName = '', onReset }) {
-  const [activeTopic, setActiveTopic] = React.useState(objectName || 'your next discovery');
+  const startingTopic = objectName || 'your next discovery';
+  const [topicTrail, setTopicTrail] = React.useState([startingTopic]);
+  const activeTopic = topicTrail[topicTrail.length - 1];
   const title = activeTopic;
   const related = connections[slugify(activeTopic)] || fallbackConnections;
 
   const selectTopic = (label) => {
-    setActiveTopic(label);
+    if (label === activeTopic || topicTrail.length >= 4) return;
+    setTopicTrail((currentTrail) => [...currentTrail, label]);
   };
 
   const resetMap = () => {
-    setActiveTopic(objectName || 'your next discovery');
+    setTopicTrail([startingTopic]);
     onReset?.();
+  };
+
+  const goBack = () => {
+    setTopicTrail((currentTrail) => (
+      currentTrail.length > 1 ? currentTrail.slice(0, -1) : currentTrail
+    ));
   };
 
   return (
@@ -101,7 +160,10 @@ export default function DiscoveryMap({ objectName = '', onReset }) {
           <h2 id="discovery-map-heading">Discovery Map</h2>
           <p>Every wonder can lead to another question.</p>
         </div>
-        <span className="map-orbit" aria-hidden="true">✦</span>
+        <div className="map-heading-actions">
+          <span className="map-stage">Stage {topicTrail.length} of 4</span>
+          <span className="map-orbit" aria-hidden="true">✦</span>
+        </div>
       </div>
 
       <div className="map-canvas" aria-label={`Learning connections for ${title}`}>
@@ -129,12 +191,19 @@ export default function DiscoveryMap({ objectName = '', onReset }) {
       </div>
 
       <div className="discovery-map-footer">
-        <span>🌱 Keep exploring to grow your map</span>
-        {(onReset || activeTopic !== (objectName || 'your next discovery')) && (
-          <button type="button" className="map-reset-button" onClick={resetMap}>
-            Find something new
-          </button>
-        )}
+        <span>🌱 Stage {topicTrail.length}: {topicTrail.join(' → ')}</span>
+        <div className="map-footer-actions">
+          {topicTrail.length > 1 && (
+            <button type="button" className="map-back-button" onClick={goBack}>
+              ← Back
+            </button>
+          )}
+          {(onReset || topicTrail.length > 1) && (
+            <button type="button" className="map-reset-button" onClick={resetMap}>
+              Start a new trail
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );

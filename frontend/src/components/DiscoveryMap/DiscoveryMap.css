@@ -45,6 +45,23 @@
   width: 2.6rem;
 }
 
+.map-heading-actions {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.map-stage {
+  background: #fff2d9;
+  border-radius: 999px;
+  color: #a45132;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.3rem 0.55rem;
+  white-space: nowrap;
+}
+
 .map-canvas {
   height: 235px;
   margin: 0.6rem auto 0;
@@ -150,14 +167,30 @@ button.map-node-3:hover {
   padding-top: 0.9rem;
 }
 
+.map-footer-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.map-back-button,
 .map-reset-button {
-  background: #17324d;
-  border: 0;
+  border: 1px solid #b8c8d8;
   border-radius: 999px;
-  color: #fff;
   cursor: pointer;
   font-weight: 700;
   padding: 0.55rem 0.85rem;
+}
+
+.map-back-button {
+  background: #fff;
+  color: #17324d;
+}
+
+.map-reset-button {
+  background: #17324d;
+  border-color: #17324d;
+  color: #fff;
 }
 
 @media (max-width: 520px) {
@@ -167,4 +200,5 @@ button.map-node-3:hover {
   .map-node-2 { right: 0; }
   .map-node-3 { bottom: 0; }
   .discovery-map-footer { align-items: flex-start; flex-direction: column; }
+  .map-footer-actions { width: 100%; }
 }
