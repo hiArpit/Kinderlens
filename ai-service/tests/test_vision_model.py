@@ -65,6 +65,7 @@ class VisionModelTests(unittest.TestCase):
 
         self.assertTrue(result["success"])
         self.assertTrue(result["is_safe"])
+        self.assertEqual(result["language"], "english")
         self.assertEqual(len(result["paragraphs"]), 4)
         self.assertEqual(result["vocabulary"][0]["term"], "distant objects")
         self.assertTrue(result["grounding"]["grounded"])
