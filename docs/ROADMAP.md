@@ -90,3 +90,15 @@ and non-cacheable responses for account and PIN authentication.
 AI-backed backend routes now retry transient timeouts, connection resets, and
 5xx/429 responses with bounded exponential backoff. Permanent validation
 failures are returned immediately.
+
+## Browser smoke tests
+
+Run the deterministic frontend smoke tests with:
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
+The tests mock backend responses and cover the child-facing entry screen,
+parent-area separation, account setup, and child-profile creation controls.

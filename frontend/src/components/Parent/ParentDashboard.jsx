@@ -247,7 +247,7 @@ function ParentDashboard({ onClose }) {
         <form onSubmit={submitAccount} className="pin-form">
           <label htmlFor="parent-email">Parent email</label>
           <input id="parent-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-          <label htmlFor="parent-password">Password</label>
+          <label htmlFor="parent-password">Parent password</label>
           <input id="parent-password" type="password" minLength="8" value={password} onChange={(event) => setPassword(event.target.value)} required />
           {error && <p id="parent-error" className="parent-error" role="alert">{error}</p>}
           <button type="submit" className="parent-primary-button">
