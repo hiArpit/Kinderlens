@@ -23,6 +23,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   outline-offset: 3px;
 }
 
+button {
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.04);
+  transform: translateY(-2px);
+}
+
 .app-shell {
   align-items: center;
   display: flex;
@@ -155,6 +164,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .learning-section {
+  align-items: start;
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);

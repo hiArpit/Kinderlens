@@ -49,6 +49,10 @@
   transform: translateY(-2px);
 }
 
+.wonder-item:hover {
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.14);
+}
+
 .wonder-item:disabled {
   cursor: wait;
   opacity: 0.65;
