@@ -70,9 +70,9 @@ RULES:
 Return ONLY valid JSON.
 """
 
-QUIZ_PROMPT = """Create a short quiz for children ages 6 to 8 about "{object_name}".
+QUIZ_PROMPT = """Create a quiz for children ages 6 to 8 about "{object_name}".
 Use ONLY facts stated in the verified reference text below.
-Create exactly 3 multiple-choice questions. Each question must have exactly 3
+Create exactly {question_count} multiple-choice questions. Each question must have exactly 3
 answer options, and "answer" must be the zero-based index of the correct option.
 Use simple words. Do not use trick questions, unsafe topics, or facts not in the text.
 
@@ -87,9 +87,9 @@ Return ONLY valid JSON in this shape:
 }}
 """
 
-REVIEW_QUIZ_PROMPT = """Create a short review quiz for children ages 6 to 8.
+REVIEW_QUIZ_PROMPT = """Create a review quiz for children ages 6 to 8.
 Use ONLY facts stated in the verified reference sections below.
-Create exactly 3 multiple-choice questions. Each question must have exactly 3
+Create exactly {question_count} multiple-choice questions. Each question must have exactly 3
 answer options, and "answer" must be the zero-based index of the correct option.
 Use simple words. Include questions about more than one object when possible.
 Do not use facts not in the reference sections.
@@ -114,8 +114,13 @@ def evaluate_readability(text: str) -> dict:
     }
 
 
-def generate_quiz(object_name: str) -> dict:
+ALLOWED_QUESTION_COUNTS = {3, 5, 10}
+
+
+def generate_quiz(object_name: str, question_count: int = 3) -> dict:
     try:
+        if question_count not in ALLOWED_QUESTION_COUNTS:
+            raise ValueError("Question count must be 3, 5, or 10.")
         grounding_info = fetch_grounding_text(object_name)
         if not grounding_info.get("grounded") or not grounding_info.get("extract"):
             return {
@@ -131,19 +136,20 @@ def generate_quiz(object_name: str) -> dict:
 
         prompt = QUIZ_PROMPT.format(
             object_name=object_name,
-            reference_text=grounding_info["extract"]
+            reference_text=grounding_info["extract"],
+            question_count=question_count,
         )
         completion_result = client.chat.completions.create(
             model=VISION_MODEL,
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
-            max_tokens=300,
+            max_tokens=600,
             temperature=0.1
         )
         parsed = json.loads(completion_result.choices[0].message.content.strip())
         questions = parsed.get("questions")
-        if not isinstance(questions, list) or len(questions) != 3:
-            raise ValueError("Quiz response must contain exactly three questions.")
+        if not isinstance(questions, list) or len(questions) != question_count:
+            raise ValueError(f"Quiz response must contain exactly {question_count} questions.")
 
         normalized_questions = []
         text_to_check = []
@@ -211,8 +217,10 @@ def generate_quiz(object_name: str) -> dict:
         }
 
 
-def generate_review_quiz(object_names: list[str]) -> dict:
+def generate_review_quiz(object_names: list[str], question_count: int = 3) -> dict:
     try:
+        if question_count not in ALLOWED_QUESTION_COUNTS:
+            raise ValueError("Question count must be 3, 5, or 10.")
         unique_names = list(dict.fromkeys(name.strip() for name in object_names if isinstance(name, str) and name.strip()))
         if not unique_names:
             return {
@@ -241,16 +249,17 @@ def generate_review_quiz(object_names: list[str]) -> dict:
         completion_result = client.chat.completions.create(
             model=VISION_MODEL,
             messages=[{"role": "user", "content": REVIEW_QUIZ_PROMPT.format(
-                reference_text="\n\n".join(references)
+                reference_text="\n\n".join(references),
+                question_count=question_count,
             )}],
             response_format={"type": "json_object"},
-            max_tokens=300,
+            max_tokens=600,
             temperature=0.1,
         )
         parsed = json.loads(completion_result.choices[0].message.content.strip())
         questions = parsed.get("questions")
-        if not isinstance(questions, list) or len(questions) != 3:
-            raise ValueError("Review quiz response must contain exactly three questions.")
+        if not isinstance(questions, list) or len(questions) != question_count:
+            raise ValueError(f"Review quiz response must contain exactly {question_count} questions.")
 
         normalized = []
         text_to_check = []

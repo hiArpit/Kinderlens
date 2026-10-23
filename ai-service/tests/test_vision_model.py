@@ -53,7 +53,7 @@ class VisionModelTests(unittest.TestCase):
             "extract": "A book is a set of pages with words or pictures.",
         }
 
-        result = vision_model.generate_quiz("Book")
+        result = vision_model.generate_quiz("Book", 3)
 
         self.assertTrue(result["success"])
         self.assertEqual(len(result["questions"]), 3)

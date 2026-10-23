@@ -39,6 +39,31 @@
   padding: 0.7rem 1rem;
 }
 
+.quiz-start {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.quiz-start label {
+  color: #4c1d95;
+  font-weight: 700;
+}
+
+.quiz-start select {
+  border: 1px solid #c4b5fd;
+  border-radius: 10px;
+  color: #4c1d95;
+  font-size: 1rem;
+  padding: 0.6rem;
+}
+
+.quiz-start .quiz-primary-button {
+  margin-top: 0;
+}
+
 .quiz-primary-button {
   background: #7c3aed;
   color: #fff;

@@ -3,12 +3,14 @@ const axios = require('axios');
 const InteractionLog = require('../models/InteractionLog');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const ALLOWED_QUESTION_COUNTS = new Set([3, 5, 10]);
 const router = express.Router();
 
 router.post('/', async (req, res) => {
   const objectName = typeof req.body?.object_name === 'string'
     ? req.body.object_name.trim()
     : '';
+  const questionCount = Number(req.body?.question_count || 3);
 
   if (!objectName) {
     return res.status(400).json({
@@ -16,11 +18,17 @@ router.post('/', async (req, res) => {
       message: 'Choose an object before starting a quiz.',
     });
   }
+  if (!ALLOWED_QUESTION_COUNTS.has(questionCount)) {
+    return res.status(400).json({
+      error: 'INVALID_QUESTION_COUNT',
+      message: 'Choose 3, 5, or 10 questions.',
+    });
+  }
 
   try {
     const aiResponse = await axios.post(
       `${AI_SERVICE_URL}/api/quiz`,
-      { object_name: objectName },
+      { object_name: objectName, question_count: questionCount },
       { timeout: 15000 }
     );
     const data = aiResponse.data;
@@ -74,6 +82,13 @@ router.post('/', async (req, res) => {
 
 router.post('/review', async (req, res) => {
   try {
+    const questionCount = Number(req.body?.question_count || 3);
+    if (!ALLOWED_QUESTION_COUNTS.has(questionCount)) {
+      return res.status(400).json({
+        error: 'INVALID_QUESTION_COUNT',
+        message: 'Choose 3, 5, or 10 questions.',
+      });
+    }
     const history = await InteractionLog.find({
       outcome: 'identified',
       objectName: { $ne: null },
@@ -82,7 +97,7 @@ router.post('/review', async (req, res) => {
 
     const aiResponse = await axios.post(
       `${AI_SERVICE_URL}/api/quiz/review`,
-      { object_names: objectNames },
+      { object_names: objectNames, question_count: questionCount },
       { timeout: 30000 }
     );
     const data = aiResponse.data;

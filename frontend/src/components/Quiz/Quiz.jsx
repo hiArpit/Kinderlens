@@ -19,6 +19,7 @@ export default function Quiz({ objectName, review = false }) {
   const [quizId, setQuizId] = useState(null);
   const [answers, setAnswers] = useState({});
   const [score, setScore] = useState(null);
+  const [questionCount, setQuestionCount] = useState(3);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,7 +32,10 @@ export default function Quiz({ objectName, review = false }) {
       const response = await fetch(review ? '/api/quiz/review' : '/api/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(review ? {} : { object_name: objectName }),
+        body: JSON.stringify({
+          ...(review ? {} : { object_name: objectName }),
+          question_count: questionCount,
+        }),
       });
       const data = await readJsonResponse(response, 'The quiz service returned an empty response. Please restart the backend and try again.');
       if (!response.ok) throw new Error(data.message || 'Could not make a quiz.');
@@ -80,9 +84,21 @@ export default function Quiz({ objectName, review = false }) {
       </div>
 
       {!questions && (
-        <button type="button" className="quiz-primary-button" onClick={startQuiz} disabled={isLoading}>
-          {isLoading ? 'Making your quiz...' : review ? 'Start review quiz' : 'Start quiz'}
-        </button>
+        <div className="quiz-start">
+          <label htmlFor={`quiz-count-${review ? 'review' : objectName}`}>Number of questions</label>
+          <select
+            id={`quiz-count-${review ? 'review' : objectName}`}
+            value={questionCount}
+            onChange={(event) => setQuestionCount(Number(event.target.value))}
+          >
+            <option value={3}>3 questions</option>
+            <option value={5}>5 questions</option>
+            <option value={10}>10 questions</option>
+          </select>
+          <button type="button" className="quiz-primary-button" onClick={startQuiz} disabled={isLoading}>
+            {isLoading ? 'Making your quiz...' : review ? 'Start review quiz' : 'Start quiz'}
+          </button>
+        </div>
       )}
 
       {error && <p className="quiz-error" role="alert">{error}</p>}
