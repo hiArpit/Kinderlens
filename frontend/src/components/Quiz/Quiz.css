@@ -118,3 +118,34 @@
 .quiz-result p {
   margin: 0.35rem 0;
 }
+
+.quiz-review {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.quiz-review h4 {
+  margin: 0 0 0.5rem;
+}
+
+.quiz-feedback {
+  border-left: 4px solid;
+  border-radius: 8px;
+  margin: 0.6rem 0;
+  padding: 0.6rem 0.75rem;
+}
+
+.quiz-feedback.correct {
+  background: #ecfdf5;
+  border-color: #10b981;
+}
+
+.quiz-feedback.incorrect {
+  background: #fff7ed;
+  border-color: #f59e0b;
+}
+
+.quiz-feedback p {
+  color: #374151;
+  font-size: 0.92rem;
+}

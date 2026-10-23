@@ -82,7 +82,7 @@ VERIFIED REFERENCE TEXT:
 Return ONLY valid JSON in this shape:
 {{
   "questions": [
-    {{"question": "...", "options": ["...", "...", "..."], "answer": 0}}
+    {{"question": "...", "options": ["...", "...", "..."], "answer": 0, "explanation": "A short reason based on the reference text."}}
   ]
 }}
 """
@@ -98,7 +98,7 @@ VERIFIED REFERENCE SECTIONS:
 {reference_text}
 
 Return ONLY valid JSON:
-{{"questions": [{{"question": "...", "options": ["...", "...", "..."], "answer": 0}}]}}
+{{"questions": [{{"question": "...", "options": ["...", "...", "..."], "answer": 0, "explanation": "A short reason based on the reference text."}}]}}
 """
 
 
@@ -159,6 +159,7 @@ def generate_quiz(object_name: str, question_count: int = 3) -> dict:
             prompt_text = question.get("question")
             options = question.get("options")
             answer = question.get("answer")
+            explanation = question.get("explanation")
             if (
                 not isinstance(prompt_text, str)
                 or not prompt_text.strip()
@@ -168,14 +169,17 @@ def generate_quiz(object_name: str, question_count: int = 3) -> dict:
                 or not isinstance(answer, int)
                 or answer < 0
                 or answer >= len(options)
+                or not isinstance(explanation, str)
+                or not explanation.strip()
             ):
                 raise ValueError("Quiz question failed validation.")
             normalized_questions.append({
                 "question": prompt_text.strip(),
                 "options": [option.strip() for option in options],
                 "answer": answer,
+                "explanation": explanation.strip(),
             })
-            text_to_check.extend([prompt_text, *options])
+            text_to_check.extend([prompt_text, *options, explanation])
 
         is_safe, violations = inspect_safety_completion(text_to_check)
         if not is_safe:
@@ -267,15 +271,22 @@ def generate_review_quiz(object_names: list[str], question_count: int = 3) -> di
             prompt_text = question.get("question") if isinstance(question, dict) else None
             options = question.get("options") if isinstance(question, dict) else None
             answer = question.get("answer") if isinstance(question, dict) else None
+            explanation = question.get("explanation") if isinstance(question, dict) else None
             if (
                 not isinstance(prompt_text, str) or not prompt_text.strip()
                 or not isinstance(options, list) or len(options) != 3
                 or not all(isinstance(option, str) and option.strip() for option in options)
                 or not isinstance(answer, int) or answer < 0 or answer >= len(options)
+                or not isinstance(explanation, str) or not explanation.strip()
             ):
                 raise ValueError("Review quiz question failed validation.")
-            normalized.append({"question": prompt_text.strip(), "options": [option.strip() for option in options], "answer": answer})
-            text_to_check.extend([prompt_text, *options])
+            normalized.append({
+                "question": prompt_text.strip(),
+                "options": [option.strip() for option in options],
+                "answer": answer,
+                "explanation": explanation.strip(),
+            })
+            text_to_check.extend([prompt_text, *options, explanation])
 
         is_safe, violations = inspect_safety_completion(text_to_check)
         if not is_safe:

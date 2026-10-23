@@ -129,6 +129,23 @@ export default function Quiz({ objectName, review = false }) {
         <div className="quiz-result">
           <strong>You got {score} out of {questions.length}!</strong>
           <p>{score === questions.length ? 'Amazing remembering!' : 'Nice try. Keep exploring and learning!'}</p>
+          <div className="quiz-review" aria-label="Answer review">
+            <h4>Let&apos;s review</h4>
+            {questions.map((question, questionIndex) => {
+              const selectedAnswer = answers[questionIndex];
+              const isCorrect = selectedAnswer === question.answer;
+              return (
+                <div className={`quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`} key={question.question}>
+                  <strong>{questionIndex + 1}. {isCorrect ? 'Correct!' : "Let's learn this one"}</strong>
+                  {!isCorrect && (
+                    <p>Your answer: {question.options[selectedAnswer]}</p>
+                  )}
+                  <p><b>Right answer:</b> {question.options[question.answer]}</p>
+                  <p><b>Why:</b> {question.explanation}</p>
+                </div>
+              );
+            })}
+          </div>
           <button type="button" className="quiz-secondary-button" onClick={startQuiz}>Try another quiz</button>
         </div>
       )}

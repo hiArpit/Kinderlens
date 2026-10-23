@@ -18,9 +18,9 @@ class VisionModelTests(unittest.TestCase):
     def test_review_quiz_uses_multiple_grounded_objects(self, create, fetch_grounding):
         create.return_value = completion({
             "questions": [
-                {"question": "What helps a telescope see far?", "options": ["Light", "Soil", "Water"], "answer": 0},
-                {"question": "What does a book have?", "options": ["Pages", "Wings", "Wheels"], "answer": 0},
-                {"question": "Which item shares ideas?", "options": ["A book", "A telescope", "A cloud"], "answer": 0},
+                {"question": "What helps a telescope see far?", "options": ["Light", "Soil", "Water"], "answer": 0, "explanation": "A telescope uses light to help us see far things."},
+                {"question": "What does a book have?", "options": ["Pages", "Wings", "Wheels"], "answer": 0, "explanation": "Books have pages."},
+                {"question": "Which item shares ideas?", "options": ["A book", "A telescope", "A cloud"], "answer": 0, "explanation": "Books can share ideas with words."},
             ]
         })
         fetch_grounding.side_effect = [
@@ -41,9 +41,9 @@ class VisionModelTests(unittest.TestCase):
     def test_quiz_uses_grounding_and_validates_questions(self, create, fetch_grounding):
         create.return_value = completion({
             "questions": [
-                {"question": "What does a book have?", "options": ["Pages", "Wheels", "Wings"], "answer": 0},
-                {"question": "What can books share?", "options": ["Ideas", "Rain", "Music"], "answer": 0},
-                {"question": "What might a book have?", "options": ["Pictures", "Engines", "Roots"], "answer": 0},
+                {"question": "What does a book have?", "options": ["Pages", "Wheels", "Wings"], "answer": 0, "explanation": "Books have pages."},
+                {"question": "What can books share?", "options": ["Ideas", "Rain", "Music"], "answer": 0, "explanation": "Books can share ideas."},
+                {"question": "What might a book have?", "options": ["Pictures", "Engines", "Roots"], "answer": 0, "explanation": "Some books have pictures."},
             ]
         })
         fetch_grounding.return_value = {

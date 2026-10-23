@@ -31,6 +31,7 @@ class QuizQuestion(BaseModel):
     question: str
     options: list[str] = Field(min_length=2, max_length=4)
     answer: int = Field(ge=0, le=3)
+    explanation: str
 
 class QuizResponse(BaseModel):
     success: bool
