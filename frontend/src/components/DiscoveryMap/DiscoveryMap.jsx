@@ -32,6 +32,36 @@ const connections = {
     { icon: '☀️', label: 'Light', detail: 'Sunlight has many colours' },
     { icon: '🌦️', label: 'Weather', detail: 'Rain and sunshine meet' },
   ],
+  water: [
+    { icon: '🌧️', label: 'Rain', detail: 'Water falls from clouds' },
+    { icon: '🌊', label: 'Ocean', detail: 'A huge home for water life' },
+    { icon: '🌈', label: 'Rainbow', detail: 'Water drops can reveal colours' },
+  ],
+  light: [
+    { icon: '☀️', label: 'Sun', detail: 'Our brightest natural light' },
+    { icon: '🎨', label: 'Colours', detail: 'Light helps us see colours' },
+    { icon: '🌈', label: 'Rainbow', detail: 'Rain drops spread light apart' },
+  ],
+  weather: [
+    { icon: '🌧️', label: 'Rain', detail: 'Water drops fall from clouds' },
+    { icon: '☀️', label: 'Sunshine', detail: 'Warm light from the Sun' },
+    { icon: '💨', label: 'Wind', detail: 'Moving air around us' },
+  ],
+  rain: [
+    { icon: '☁️', label: 'Clouds', detail: 'Rain begins in clouds' },
+    { icon: '🌱', label: 'Plants', detail: 'Rain helps plants grow' },
+    { icon: '🌈', label: 'Rainbow', detail: 'Sunlight and rain can make colours' },
+  ],
+  sunshine: [
+    { icon: '☀️', label: 'Sun', detail: 'The star closest to Earth' },
+    { icon: '🌱', label: 'Plants', detail: 'Plants use light to grow' },
+    { icon: '🌈', label: 'Rainbow', detail: 'Light can spread into colours' },
+  ],
+  wind: [
+    { icon: '💨', label: 'Air', detail: 'Wind is moving air' },
+    { icon: '🌬️', label: 'Weather', detail: 'Wind is part of changing weather' },
+    { icon: '🪁', label: 'Kites', detail: 'Wind can make kites fly' },
+  ],
   volcano: [
     { icon: '🌋', label: 'Earth', detail: 'Our planet is always changing' },
     { icon: '🔥', label: 'Heat', detail: 'Deep inside Earth is very hot' },
