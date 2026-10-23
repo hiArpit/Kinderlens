@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import './Story.css';
 
+async function readJsonResponse(response) {
+  const body = await response.text();
+  if (!body.trim()) {
+    throw new Error('The story service returned no response. Please restart the backend and try again.');
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error('The story service is still starting. Please restart the backend and try again.');
+  }
+}
+
 export default function Story({ objectName }) {
   const [story, setStory] = useState(null);
   const [error, setError] = useState('');
@@ -15,7 +28,7 @@ export default function Story({ objectName }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ object_name: objectName }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
       if (!response.ok) throw new Error(data.message || 'Could not make a story.');
       if (!data.available) throw new Error(data.message || 'A story is not available yet.');
       setStory(data);
