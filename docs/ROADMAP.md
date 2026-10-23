@@ -49,7 +49,5 @@ Run the seeded AI-service evaluations with:
 python evaluation/run_evals.py
 ```
 
-Use `--strict` when image fixtures have been added; this treats image-dependent
-cases without fixtures as failures instead of skips. The current seeded
-`unsafe-item` and `ambiguous-book-diary` cases are reported as skipped because
-the repository does not contain safe test image fixtures.
+Use `--strict` to treat any skipped case as a failure. The adversarial image
+cases use the checked-in fixtures under `evaluation/test_cases/fixtures`.
