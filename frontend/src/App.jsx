@@ -26,7 +26,7 @@ export default function App() {
         }
       })
       .catch(() => {});
-  }, [childProfileId]);
+  }, [childProfileId, showParentDashboard]);
 
   const handleProfileChange = (event) => {
     const nextId = event.target.value;
@@ -86,10 +86,44 @@ export default function App() {
           </div>
           {profiles.length > 0 && (
             <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-              <label htmlFor="child-profile-select">Learning for </label>
+              <label htmlFor="child-profile-select" style={{ color: '#1e3a8a', fontWeight: 700, marginRight: '0.5rem' }}>
+                Learning for
+              </label>
               <select id="child-profile-select" value={childProfileId} onChange={handleProfileChange}>
                 {profiles.map((profile) => <option key={profile._id} value={profile._id}>{profile.name}</option>)}
               </select>
+            </div>
+          )}
+          {profiles.length === 0 && (
+            <div style={{
+              backgroundColor: '#eff6ff',
+              borderRadius: '14px',
+              color: '#1e40af',
+              marginBottom: '1rem',
+              maxWidth: '520px',
+              padding: '0.85rem 1rem',
+              textAlign: 'center',
+              width: '100%',
+            }}>
+              <strong>Ready to start learning?</strong>
+              <p style={{ margin: '0.35rem 0 0.65rem' }}>
+                Ask a grown-up to set up your learning profile so your discoveries can be saved.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowParentDashboard(true)}
+                style={{
+                  background: '#2563eb',
+                  border: 0,
+                  borderRadius: '9px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  padding: '0.55rem 0.8rem',
+                }}
+              >
+                Parent setup
+              </button>
             </div>
           )}
           <WonderList onExplore={handleUploadSuccess} language={language} childProfileId={childProfileId} />

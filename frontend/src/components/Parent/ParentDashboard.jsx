@@ -283,6 +283,16 @@ function ParentDashboard({ onClose }) {
         <button type="button" className={activeTab === 'safety' ? 'active' : ''} onClick={() => setActiveTab('safety')}>Safety &amp; Controls</button>
       </nav>
 
+      {accountMode && profiles.length === 0 && (
+        <div className="profile-setup-banner">
+          <strong>Set up a child profile</strong>
+          <p>Create a profile so captures, quizzes, and stories are saved for the right child.</p>
+          <button type="button" className="parent-primary-button" onClick={() => setActiveTab('safety')}>
+            Create child profile
+          </button>
+        </div>
+      )}
+
       {isLoading ? <p className="parent-muted">Loading learning history...</p> : (
         <>
           {activeTab === 'highlights' && (
