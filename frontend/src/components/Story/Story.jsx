@@ -15,7 +15,7 @@ async function readJsonResponse(response) {
   }
 }
 
-export default function Story({ objectName, language = 'english' }) {
+export default function Story({ objectName, language = 'english', childProfileId = '' }) {
   const [story, setStory] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,8 +26,13 @@ export default function Story({ objectName, language = 'english' }) {
     try {
       const response = await fetch('/api/story', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ object_name: objectName, language }),
+        body: JSON.stringify({
+          object_name: objectName,
+          language,
+          child_profile_id: childProfileId || undefined,
+        }),
       });
       const data = await readJsonResponse(response);
       if (!response.ok) throw new Error(data.message || 'Could not make a story.');

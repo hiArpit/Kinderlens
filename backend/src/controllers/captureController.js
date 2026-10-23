@@ -4,7 +4,7 @@ const InteractionLog = require('../models/InteractionLog');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
-const saveInteraction = async (data, language = 'english') => {
+const saveInteraction = async (data, language = 'english', parentId = null, childProfileId = null) => {
   const outcome = data.is_safe === false
     ? 'unsafe'
     : data.identified
@@ -12,6 +12,8 @@ const saveInteraction = async (data, language = 'english') => {
       : 'unidentified';
 
   await InteractionLog.create({
+    parentId,
+    childProfileId,
     outcome,
     language: data.language || language,
     objectName: data.object_name,
@@ -69,7 +71,12 @@ const handlePhotoUpload = async (req, res) => {
       });
     }
 
-    await saveInteraction(data, req.body.language || 'english');
+    await saveInteraction(
+      data,
+      req.body.language || 'english',
+      req.parentId,
+      req.childProfileId
+    );
 
     // Safety gate triggered
     if (!data.is_safe) {

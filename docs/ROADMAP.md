@@ -76,3 +76,7 @@ making the request.
 Local parent accounts now support password hashing, signed HttpOnly session
 cookies, and protected child-profile creation/listing endpoints. The shared
 PIN remains as a local prototype fallback while account migration is tested.
+
+Activity requests can now carry a selected child profile. The backend verifies
+that the profile belongs to the signed-in parent before saving captures,
+Wonder List explorations, quizzes, or stories.

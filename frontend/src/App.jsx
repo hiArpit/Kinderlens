@@ -10,6 +10,30 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [showParentDashboard, setShowParentDashboard] = useState(false);
   const [language, setLanguage] = useState('english');
+  const [profiles, setProfiles] = useState([]);
+  const [childProfileId, setChildProfileId] = useState(
+    () => localStorage.getItem('kinderlens_child_profile') || ''
+  );
+
+  React.useEffect(() => {
+    fetch('/api/account/profiles', { credentials: 'include' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!data?.profiles) return;
+        setProfiles(data.profiles);
+        if (!data.profiles.some((profile) => profile._id === childProfileId)) {
+          setChildProfileId(data.profiles[0]?._id || '');
+        }
+      })
+      .catch(() => {});
+  }, [childProfileId]);
+
+  const handleProfileChange = (event) => {
+    const nextId = event.target.value;
+    setChildProfileId(nextId);
+    if (nextId) localStorage.setItem('kinderlens_child_profile', nextId);
+    else localStorage.removeItem('kinderlens_child_profile');
+  };
 
   const handleUploadSuccess = (data) => {
     setResult(data);
@@ -60,9 +84,17 @@ export default function App() {
               <option value="hinglish">Hinglish</option>
             </select>
           </div>
-          <WonderList onExplore={handleUploadSuccess} language={language} />
-          <Quiz review language={language} />
-          <PhotoCapture onUploadSuccess={handleUploadSuccess} language={language} />
+          {profiles.length > 0 && (
+            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+              <label htmlFor="child-profile-select">Learning for </label>
+              <select id="child-profile-select" value={childProfileId} onChange={handleProfileChange}>
+                {profiles.map((profile) => <option key={profile._id} value={profile._id}>{profile.name}</option>)}
+              </select>
+            </div>
+          )}
+          <WonderList onExplore={handleUploadSuccess} language={language} childProfileId={childProfileId} />
+          <Quiz review language={language} childProfileId={childProfileId} />
+          <PhotoCapture onUploadSuccess={handleUploadSuccess} language={language} childProfileId={childProfileId} />
         </>
       ) : (
         <div style={{
@@ -130,8 +162,8 @@ export default function App() {
                   <span>Reading: Grade {result.readability.grade_level}</span>
                 )}
               </div>
-              <Quiz objectName={result.objectName} language={result.language || language} />
-              <Story objectName={result.objectName} language={result.language || language} />
+              <Quiz objectName={result.objectName} language={result.language || language} childProfileId={childProfileId} />
+              <Story objectName={result.objectName} language={result.language || language} childProfileId={childProfileId} />
             </>
           ) : (
             <div style={{ textAlign: 'center' }}>

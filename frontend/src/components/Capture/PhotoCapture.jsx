@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import './PhotoCapture.css';
 
-export default function PhotoCapture({ onUploadSuccess, language = 'english' }) {
+export default function PhotoCapture({ onUploadSuccess, language = 'english', childProfileId = '' }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -122,10 +122,12 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english' }) 
     const filename = capturedImage.name || 'capture.jpg';
     formData.append('photo', capturedImage, filename);
     formData.append('language', language);
+    if (childProfileId) formData.append('child_profile_id', childProfileId);
 
     try {
       const res = await fetch('/api/capture/upload', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 

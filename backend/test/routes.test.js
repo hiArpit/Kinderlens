@@ -59,6 +59,15 @@ test('child profiles require an account session', async () => {
   assert.equal(response.body.error, 'PARENT_AUTH_REQUIRED');
 });
 
+test('activity cannot select a child profile without parent authentication', async () => {
+  const response = await request(app)
+    .post('/api/quiz')
+    .send({ object_name: 'Moon', question_count: 3, child_profile_id: '507f1f77bcf86cd799439011' });
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.error, 'ACCOUNT_REQUIRED');
+});
+
 test('parent history rejects missing and invalid authorization', async () => {
   const missing = await request(app).get('/api/history');
   const invalid = await request(app)

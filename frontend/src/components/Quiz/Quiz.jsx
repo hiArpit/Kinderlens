@@ -14,7 +14,7 @@ async function readJsonResponse(response, fallbackMessage) {
   }
 }
 
-export default function Quiz({ objectName, language = 'english', review = false }) {
+export default function Quiz({ objectName, language = 'english', review = false, childProfileId = '' }) {
   const [questions, setQuestions] = useState(null);
   const [quizId, setQuizId] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -31,11 +31,13 @@ export default function Quiz({ objectName, language = 'english', review = false 
     try {
       const response = await fetch(review ? '/api/quiz/review' : '/api/quiz', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...(review ? {} : { object_name: objectName }),
           question_count: questionCount,
           language,
+          child_profile_id: childProfileId || undefined,
         }),
       });
       const data = await readJsonResponse(response, 'The quiz service returned an empty response. Please restart the backend and try again.');

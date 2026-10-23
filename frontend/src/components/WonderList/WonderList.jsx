@@ -14,7 +14,7 @@ async function readJsonResponse(response, fallbackMessage) {
   }
 }
 
-export default function WonderList({ onExplore, language = 'english' }) {
+export default function WonderList({ onExplore, language = 'english', childProfileId = '' }) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [loadingSlug, setLoadingSlug] = useState('');
@@ -35,8 +35,9 @@ export default function WonderList({ onExplore, language = 'english' }) {
     try {
       const response = await fetch(`/api/wonder-list/${item.slug}/explore`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language }),
+        body: JSON.stringify({ language, child_profile_id: childProfileId || undefined }),
       });
       const data = await readJsonResponse(
         response,

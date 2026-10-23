@@ -70,8 +70,15 @@ const requireParentAuth = (req, res, next) => {
   return next();
 };
 
+const optionalParentAuth = (req, res, next) => {
+  const token = getToken(req);
+  if (!token) return next();
+  return requireParentAuth(req, res, next);
+};
+
 module.exports = {
   ACCOUNT_COOKIE,
   createParentToken,
   requireParentAuth,
+  optionalParentAuth,
 };

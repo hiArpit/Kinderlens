@@ -1,10 +1,13 @@
 const express = require('express');
 const axios = require('axios');
 const InteractionLog = require('../models/InteractionLog');
+const { optionalParentAuth } = require('../middlewares/parentAuth');
+const { resolveChildProfile } = require('../middlewares/childProfile');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const ALLOWED_QUESTION_COUNTS = new Set([3, 5, 10]);
 const router = express.Router();
+router.use(optionalParentAuth, resolveChildProfile);
 
 router.post('/', async (req, res) => {
   const objectName = typeof req.body?.object_name === 'string'
@@ -63,6 +66,8 @@ router.post('/', async (req, res) => {
         questionCount: data.questions.length,
       },
       language: data.language || language,
+      parentId: req.parentId,
+      childProfileId: req.childProfileId,
     });
 
     return res.status(200).json({
@@ -73,6 +78,8 @@ router.post('/', async (req, res) => {
       questions: data.questions,
       grounding: data.grounding,
       language: data.language || language,
+      parentId: req.parentId,
+      childProfileId: req.childProfileId,
     });
   } catch (error) {
     console.error('Error generating quiz:', error.message);
@@ -93,10 +100,16 @@ router.post('/review', async (req, res) => {
         message: 'Choose 3, 5, or 10 questions.',
       });
     }
-    const history = await InteractionLog.find({
+    const historyFilter = {
       outcome: 'identified',
       objectName: { $ne: null },
-    }).sort({ createdAt: -1 }).limit(8).select('objectName').lean();
+    };
+    if (req.parentId) {
+      historyFilter.parentId = req.parentId;
+      if (req.childProfileId) historyFilter.childProfileId = req.childProfileId;
+    }
+    const history = await InteractionLog.find(historyFilter)
+      .sort({ createdAt: -1 }).limit(8).select('objectName').lean();
     const objectNames = [...new Set(history.map((entry) => entry.objectName).filter(Boolean))];
 
     const aiResponse = await axios.post(
@@ -124,6 +137,8 @@ router.post('/review', async (req, res) => {
       grounding: { grounded: true, sourceTitle: 'Verified object references' },
       quiz: { questionCount: data.questions.length },
       language: data.language || language,
+      parentId: req.parentId,
+      childProfileId: req.childProfileId,
     });
 
     return res.status(200).json({
@@ -151,8 +166,10 @@ router.put('/:id/score', async (req, res) => {
   }
 
   try {
+    const scoreFilter = { _id: req.params.id, activityType: 'quiz' };
+    if (req.parentId) scoreFilter.parentId = req.parentId;
     const historyEntry = await InteractionLog.findOneAndUpdate(
-      { _id: req.params.id, activityType: 'quiz' },
+      scoreFilter,
       { 'quiz.score': score },
       { new: true, runValidators: true }
     ).lean();

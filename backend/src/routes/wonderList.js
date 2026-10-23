@@ -2,9 +2,12 @@ const express = require('express');
 const axios = require('axios');
 const WONDER_LIST = require('../data/wonderList');
 const InteractionLog = require('../models/InteractionLog');
+const { optionalParentAuth } = require('../middlewares/parentAuth');
+const { resolveChildProfile } = require('../middlewares/childProfile');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const router = express.Router();
+router.use(optionalParentAuth, resolveChildProfile);
 
 router.get('/', (req, res) => {
   res.status(200).json({ success: true, items: WONDER_LIST });
@@ -29,6 +32,8 @@ router.post('/:slug/explore', async (req, res) => {
     }
 
     await InteractionLog.create({
+      parentId: req.parentId,
+      childProfileId: req.childProfileId,
       outcome: data.is_safe === false ? 'unsafe' : data.identified ? 'identified' : 'unidentified',
       language: data.language || req.body.language || 'english',
       objectName: data.object_name,

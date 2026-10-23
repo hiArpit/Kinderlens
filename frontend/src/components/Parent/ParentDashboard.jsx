@@ -2,14 +2,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './ParentDashboard.css';
 
 const TOKEN_KEY = 'kinderlens_parent_token';
+const ACCOUNT_MODE_KEY = 'kinderlens_account_mode';
 
 function formatDate(value) {
   return new Date(value).toLocaleString();
 }
 
 function ParentDashboard({ onClose }) {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
-  const [accountMode, setAccountMode] = useState(false);
+  const [token, setToken] = useState(
+    () => localStorage.getItem(TOKEN_KEY)
+      || (localStorage.getItem(ACCOUNT_MODE_KEY) === 'true' ? 'account-session' : null)
+  );
+  const [accountMode, setAccountMode] = useState(
+    () => localStorage.getItem(ACCOUNT_MODE_KEY) === 'true'
+  );
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +25,9 @@ function ParentDashboard({ onClose }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [profiles, setProfiles] = useState([]);
+  const [profileName, setProfileName] = useState('');
+  const [profileAge, setProfileAge] = useState('');
 
   useEffect(() => {
     if (!token) return;
@@ -48,6 +57,14 @@ function ParentDashboard({ onClose }) {
 
     loadHistory();
   }, [token, accountMode]);
+
+  useEffect(() => {
+    if (!accountMode || !token) return;
+    fetch('/api/account/profiles', { credentials: 'include' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setProfiles(data?.profiles || []))
+      .catch(() => {});
+  }, [accountMode, token]);
 
   const identified = useMemo(
     () => history.filter((entry) => entry.outcome === 'identified'),
@@ -96,6 +113,7 @@ function ParentDashboard({ onClose }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Could not sign in.');
       localStorage.removeItem(TOKEN_KEY);
+      localStorage.setItem(ACCOUNT_MODE_KEY, 'true');
       setAccountMode(true);
       setToken('account-session');
       setEmail('');
@@ -110,9 +128,31 @@ function ParentDashboard({ onClose }) {
       fetch('/api/account/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     }
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(ACCOUNT_MODE_KEY);
     setToken(null);
     setAccountMode(false);
     setHistory([]);
+  };
+
+  const createProfile = async (event) => {
+    event.preventDefault();
+    setError('');
+    try {
+      const response = await fetch('/api/account/profiles', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: profileName, age: profileAge ? Number(profileAge) : null }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Could not create the child profile.');
+      setProfiles((current) => [...current, data.profile]);
+      setProfileName('');
+      setProfileAge('');
+      setNotice('Child profile created.');
+    } catch (profileError) {
+      setError(profileError.message);
+    }
   };
 
   const deleteEntry = async (entryId) => {
@@ -308,6 +348,33 @@ function ParentDashboard({ onClose }) {
                 <strong>Privacy and safety</strong>
                 <p>Only analyzed results are stored. Raw photos are not saved in the history database.</p>
               </div>
+              {accountMode && (
+                <div className="privacy-actions">
+                  <h3>Child profiles</h3>
+                  <p className="parent-muted">
+                    {profiles.length ? profiles.map((profile) => profile.name).join(', ') : 'No child profiles yet.'}
+                  </p>
+                  <form className="profile-form" onSubmit={createProfile}>
+                    <input
+                      aria-label="Child name"
+                      placeholder="Child name"
+                      value={profileName}
+                      onChange={(event) => setProfileName(event.target.value)}
+                      required
+                    />
+                    <input
+                      aria-label="Child age"
+                      type="number"
+                      min="1"
+                      max="18"
+                      placeholder="Age"
+                      value={profileAge}
+                      onChange={(event) => setProfileAge(event.target.value)}
+                    />
+                    <button type="submit" className="parent-primary-button">Add child</button>
+                  </form>
+                </div>
+              )}
               <div className="privacy-actions">
                 <h3>Manage history</h3>
                 <p className="parent-muted">Export a copy before deleting if you want to keep a record.</p>

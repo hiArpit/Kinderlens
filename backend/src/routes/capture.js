@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const upload = require('../middlewares/upload');
 const { handlePhotoUpload } = require('../controllers/captureController');
+const { optionalParentAuth } = require('../middlewares/parentAuth');
+const { resolveChildProfile } = require('../middlewares/childProfile');
 
 // Multer wrapper to capture and format upload errors cleanly
 const uploadSinglePhoto = (req, res, next) => {
@@ -30,6 +32,6 @@ const uploadSinglePhoto = (req, res, next) => {
   });
 };
 
-router.post('/upload', uploadSinglePhoto, handlePhotoUpload);
+router.post('/upload', optionalParentAuth, uploadSinglePhoto, resolveChildProfile, handlePhotoUpload);
 
 module.exports = router;

@@ -242,6 +242,18 @@
   padding-bottom: 1.5rem;
 }
 
+.profile-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.profile-form input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.55rem;
+}
+
 .privacy-actions h3 {
   margin-bottom: 0.4rem;
 }
