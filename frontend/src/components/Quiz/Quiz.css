@@ -149,3 +149,17 @@
   color: #374151;
   font-size: 0.92rem;
 }
+
+.quiz-result-label {
+  display: block;
+  font-weight: 700;
+  margin-top: 0.35rem;
+}
+
+.correct-label {
+  color: #047857;
+}
+
+.incorrect-label {
+  color: #b45309;
+}

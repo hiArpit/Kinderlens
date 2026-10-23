@@ -136,7 +136,10 @@ export default function Quiz({ objectName, review = false }) {
               const isCorrect = selectedAnswer === question.answer;
               return (
                 <div className={`quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`} key={question.question}>
-                  <strong>{questionIndex + 1}. {isCorrect ? 'Correct!' : "Let's learn this one"}</strong>
+                  <strong>{questionIndex + 1}. {question.question}</strong>
+                  <span className={`quiz-result-label ${isCorrect ? 'correct-label' : 'incorrect-label'}`}>
+                    {isCorrect ? 'Correct!' : "Let's learn this one"}
+                  </span>
                   {!isCorrect && (
                     <p>Your answer: {question.options[selectedAnswer]}</p>
                   )}
