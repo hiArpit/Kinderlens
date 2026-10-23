@@ -37,19 +37,12 @@ class VisionModelTests(unittest.TestCase):
 
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
-    def test_named_object_explanation_simplifies_overage_readability(self, create, fetch_grounding):
-        create.side_effect = [
-            completion({
-                "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
-                "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
-                "action_prompt": "Compare their body structures.",
-            }),
-            completion({
-                "kid_summary": "Dinosaurs were small. Birds came from them.",
-                "fun_fact": "Some dinosaurs had feathers.",
-                "action_prompt": "Look for dinosaur shapes in books.",
-            }),
-        ]
+    def test_named_object_explanation_keeps_overage_readability_visible(self, create, fetch_grounding):
+        create.return_value = completion({
+            "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
+            "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
+            "action_prompt": "Compare their body structures.",
+        })
         fetch_grounding.return_value = {
             "grounded": True,
             "source_title": "Dinosaur",
@@ -61,8 +54,9 @@ class VisionModelTests(unittest.TestCase):
 
         self.assertTrue(result["success"])
         self.assertTrue(result["identified"])
-        self.assertTrue(result["readability"]["age_appropriate"])
-        self.assertEqual(create.call_count, 2)
+        self.assertFalse(result["readability"]["age_appropriate"])
+        self.assertEqual(result["object_name"], "Dinosaur")
+        self.assertEqual(create.call_count, 1)
 
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
