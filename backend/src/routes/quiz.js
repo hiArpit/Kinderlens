@@ -3,6 +3,7 @@ const axios = require('axios');
 const InteractionLog = require('../models/InteractionLog');
 const { optionalParentAuth } = require('../middlewares/parentAuth');
 const { resolveChildProfile } = require('../middlewares/childProfile');
+const { requestWithRetry } = require('../services/aiServiceClient');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const ALLOWED_QUESTION_COUNTS = new Set([3, 5, 10]);
@@ -30,11 +31,11 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const aiResponse = await axios.post(
+    const aiResponse = await requestWithRetry(() => axios.post(
       `${AI_SERVICE_URL}/api/quiz`,
       { object_name: objectName, question_count: questionCount, language },
       { timeout: 15000 }
-    );
+    ));
     const data = aiResponse.data;
 
     if (!data.success) {
@@ -112,11 +113,11 @@ router.post('/review', async (req, res) => {
       .sort({ createdAt: -1 }).limit(8).select('objectName').lean();
     const objectNames = [...new Set(history.map((entry) => entry.objectName).filter(Boolean))];
 
-    const aiResponse = await axios.post(
+    const aiResponse = await requestWithRetry(() => axios.post(
       `${AI_SERVICE_URL}/api/quiz/review`,
       { object_names: objectNames, question_count: questionCount, language },
       { timeout: 30000 }
-    );
+    ));
     const data = aiResponse.data;
 
     if (!data.success) {

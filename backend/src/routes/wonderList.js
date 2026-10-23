@@ -4,6 +4,7 @@ const WONDER_LIST = require('../data/wonderList');
 const InteractionLog = require('../models/InteractionLog');
 const { optionalParentAuth } = require('../middlewares/parentAuth');
 const { resolveChildProfile } = require('../middlewares/childProfile');
+const { requestWithRetry } = require('../services/aiServiceClient');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const router = express.Router();
@@ -20,11 +21,13 @@ router.post('/:slug/explore', async (req, res) => {
   }
 
   try {
-    const aiResponse = await axios.post(
+    const aiResponse = await requestWithRetry(() => axios.post(
       `${AI_SERVICE_URL}/api/explain/object`,
       { object_name: item.name, language: req.body.language || 'english' },
       { timeout: 30000 }
-    );
+    ), {
+      onRetry: ({ attempt, delay }) => console.warn(`Retrying Wonder List request (${attempt}) after ${delay}ms`),
+    });
     const data = aiResponse.data;
 
     if (!data.success) {

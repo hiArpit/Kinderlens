@@ -1,6 +1,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const InteractionLog = require('../models/InteractionLog');
+const { requestWithRetry } = require('../services/aiServiceClient');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -46,19 +47,22 @@ const handlePhotoUpload = async (req, res) => {
       });
     }
 
-    const form = new FormData();
-    form.append('file', req.file.buffer, {
-      filename: req.file.originalname || 'capture.jpg',
-      contentType: req.file.mimetype,
-    });
-    form.append('language', req.body.language || 'english');
-
-    const aiResponse = await axios.post(`${AI_SERVICE_URL}/api/vision/recognize`, form, {
-      headers: {
-        ...form.getHeaders(),
-        'x-kinderlens-language': req.body.language || 'english',
-      },
-      timeout: 15000,
+    const aiResponse = await requestWithRetry(() => {
+      const form = new FormData();
+      form.append('file', req.file.buffer, {
+        filename: req.file.originalname || 'capture.jpg',
+        contentType: req.file.mimetype,
+      });
+      form.append('language', req.body.language || 'english');
+      return axios.post(`${AI_SERVICE_URL}/api/vision/recognize`, form, {
+        headers: {
+          ...form.getHeaders(),
+          'x-kinderlens-language': req.body.language || 'english',
+        },
+        timeout: 15000,
+      });
+    }, {
+      onRetry: ({ attempt, delay }) => console.warn(`Retrying vision request (${attempt}) after ${delay}ms`),
     });
 
     const data = aiResponse.data;

@@ -86,3 +86,7 @@ Wonder List explorations, quizzes, or stories.
 The backend now applies bounded JSON request sizes, rate limits to parent
 authentication and AI-backed routes, retry guidance for throttled requests,
 and non-cacheable responses for account and PIN authentication.
+
+AI-backed backend routes now retry transient timeouts, connection resets, and
+5xx/429 responses with bounded exponential backoff. Permanent validation
+failures are returned immediately.
