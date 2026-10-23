@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import './PhotoCapture.css';
 
-export default function PhotoCapture({ onUploadSuccess }) {
+export default function PhotoCapture({ onUploadSuccess, language = 'english' }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -121,6 +121,7 @@ export default function PhotoCapture({ onUploadSuccess }) {
     // Preserve extension or default to .jpg
     const filename = capturedImage.name || 'capture.jpg';
     formData.append('photo', capturedImage, filename);
+    formData.append('language', language);
 
     try {
       const res = await fetch('/api/capture/upload', {

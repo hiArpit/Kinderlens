@@ -148,6 +148,19 @@ def evaluate_readability(text: str) -> dict:
 
 
 ALLOWED_QUESTION_COUNTS = {3, 5, 10}
+SUPPORTED_LANGUAGES = {"english", "hindi", "hinglish"}
+
+
+def language_instruction(language):
+    if language == "hindi":
+        return "Write the child-facing content in simple Hindi using Devanagari script."
+    if language == "hinglish":
+        return "Write the child-facing content in natural, simple Hinglish using English letters."
+    return "Write the child-facing content in simple English."
+
+
+def normalize_language(language):
+    return language if language in SUPPORTED_LANGUAGES else "english"
 
 
 def normalize_vocabulary(value, source_texts):
@@ -171,8 +184,9 @@ def normalize_vocabulary(value, source_texts):
     return terms
 
 
-def generate_story(object_name: str) -> dict:
+def generate_story(object_name: str, language: str = "english") -> dict:
     try:
+        language = normalize_language(language)
         grounding_info = fetch_grounding_text(object_name)
         if not grounding_info.get("grounded") or not grounding_info.get("extract"):
             return {
@@ -188,7 +202,7 @@ def generate_story(object_name: str) -> dict:
             messages=[{"role": "user", "content": STORY_PROMPT.format(
                 object_name=object_name,
                 reference_text=grounding_info["extract"],
-            )}],
+            ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"}],
             response_format={"type": "json_object"},
             max_tokens=500,
             temperature=0.3,
@@ -237,7 +251,7 @@ def generate_story(object_name: str) -> dict:
         return {
             "success": False, "object_name": None, "title": None, "paragraphs": [], "vocabulary": [],
             "grounding": None, "is_safe": True, "confidence_note": None,
-            "error": str(error),
+            "error": str(error), "language": language,
         }
 
 
@@ -435,8 +449,9 @@ def generate_review_quiz(object_names: list[str], question_count: int = 3) -> di
         }
 
 
-def explain_object_name(object_name: str) -> dict:
+def explain_object_name(object_name: str, language: str = "english") -> dict:
     try:
+        language = normalize_language(language)
         grounding_info = fetch_grounding_text(object_name)
         if not grounding_info.get("grounded") or not grounding_info.get("extract"):
             return {
@@ -457,7 +472,7 @@ def explain_object_name(object_name: str) -> dict:
         prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
             object_name=object_name,
             reference_text=grounding_info["extract"]
-        )
+        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
         synthesis_completion = client.chat.completions.create(
             model=VISION_MODEL,
             messages=[{"role": "user", "content": prompt}],
@@ -491,6 +506,7 @@ def explain_object_name(object_name: str) -> dict:
                 "grounding": None,
                 "confidence_note": "Output blocked by content safety gate.",
                 "error": None,
+                "language": language,
             }
 
         readability = evaluate_readability(f"{kid_summary} {fun_fact}")
@@ -513,6 +529,7 @@ def explain_object_name(object_name: str) -> dict:
             },
             "confidence_note": None,
             "error": None,
+            "language": language,
         }
     except Exception as error:
         logger.exception("Named object explanation failed")
@@ -528,12 +545,13 @@ def explain_object_name(object_name: str) -> dict:
             "readability": None,
             "grounding": None,
             "confidence_note": None,
-            "error": str(error),
+            "error": str(error), "language": language,
         }
 
 
-def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
+def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg", language: str = "english") -> dict:
     try:
+        language = normalize_language(language)
         # Step A: Base64 encode image for Groq Vision
         base64_image = base64.b64encode(image_bytes).decode("utf-8")
         image_data_url = f"data:{mime_type};base64,{base64_image}"
@@ -666,7 +684,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
         prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
             object_name=object_name,
             reference_text=ref_text
-        )
+        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
 
         synthesis_completion = client.chat.completions.create(
             model=VISION_MODEL,
@@ -710,6 +728,7 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
                 "grounding": None,
                 "confidence_note": "Output blocked by content safety gate.",
                 "error": None
+                ,"language": language
             }
 
         # Step F: Readability assessment
@@ -754,5 +773,5 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg") -> d
             "confidence_note": None,
             "possible_objects": [],
             "needs_clearer_image": False,
-            "error": str(e)
+            "error": str(e), "language": language
         }

@@ -12,6 +12,11 @@ const interactionLogSchema = new mongoose.Schema(
       enum: ['exploration', 'quiz', 'story'],
       default: 'exploration',
     },
+    language: {
+      type: String,
+      enum: ['english', 'hindi', 'hinglish'],
+      default: 'english',
+    },
     objectName: {
       type: String,
       trim: true,

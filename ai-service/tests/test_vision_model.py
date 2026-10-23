@@ -13,6 +13,27 @@ def completion(payload):
 
 
 class VisionModelTests(unittest.TestCase):
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
+    def test_named_object_explanation_passes_selected_language(self, create, fetch_grounding):
+        create.return_value = completion({
+            "kid_summary": "चंद्रमा पृथ्वी के चारों ओर घूमता है।",
+            "fun_fact": "चंद्रमा एक प्राकृतिक उपग्रह है।",
+            "action_prompt": "आज रात चंद्रमा को देखो।",
+            "vocabulary": [],
+        })
+        fetch_grounding.return_value = {
+            "grounded": True,
+            "source_title": "Moon",
+            "source_url": "https://en.wikipedia.org/wiki/Moon",
+            "extract": "The Moon is Earth's natural satellite.",
+        }
+
+        result = vision_model.explain_object_name("Moon", "hindi")
+
+        self.assertEqual(result["language"], "hindi")
+        self.assertIn("Devanagari", create.call_args.kwargs["messages"][0]["content"])
+
     def test_child_prompts_require_plain_language_definitions(self):
         self.assertIn("explain it immediately in simple words", vision_model.CHILD_GROUNDED_SYNTHESIS_PROMPT)
         self.assertIn("Explain every science, history, or subject word", vision_model.STORY_PROMPT)

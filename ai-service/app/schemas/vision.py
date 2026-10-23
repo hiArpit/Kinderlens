@@ -31,6 +31,7 @@ class VisionRecognitionResponse(BaseModel):
     needs_clearer_image: bool = False
     error: Optional[str] = None
     vocabulary: list[VocabularyTerm] = Field(default_factory=list)
+    language: str = "english"
 
 class QuizQuestion(BaseModel):
     question: str
@@ -59,3 +60,4 @@ class StoryResponse(BaseModel):
     is_safe: bool = True
     confidence_note: Optional[str] = None
     error: Optional[str] = None
+    language: str = "english"

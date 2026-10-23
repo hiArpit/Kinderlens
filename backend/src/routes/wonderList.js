@@ -19,7 +19,7 @@ router.post('/:slug/explore', async (req, res) => {
   try {
     const aiResponse = await axios.post(
       `${AI_SERVICE_URL}/api/explain/object`,
-      { object_name: item.name },
+      { object_name: item.name, language: req.body.language || 'english' },
       { timeout: 15000 }
     );
     const data = aiResponse.data;
@@ -30,11 +30,13 @@ router.post('/:slug/explore', async (req, res) => {
 
     await InteractionLog.create({
       outcome: data.is_safe === false ? 'unsafe' : data.identified ? 'identified' : 'unidentified',
+      language: data.language || req.body.language || 'english',
       objectName: data.object_name,
       kidSummary: data.kid_summary,
       funFact: data.fun_fact,
       actionPrompt: data.action_prompt,
       vocabulary: data.vocabulary || [],
+      language: data.language || req.body.language || 'english',
       readability: data.readability && {
         gradeLevel: data.readability.grade_level,
         readingEase: data.readability.reading_ease,

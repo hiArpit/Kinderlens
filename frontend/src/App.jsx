@@ -9,6 +9,7 @@ import VocabularyText from './components/Vocabulary/VocabularyText';
 export default function App() {
   const [result, setResult] = useState(null);
   const [showParentDashboard, setShowParentDashboard] = useState(false);
+  const [language, setLanguage] = useState('english');
 
   const handleUploadSuccess = (data) => {
     setResult(data);
@@ -44,9 +45,24 @@ export default function App() {
 
       {!result ? (
         <>
-          <WonderList onExplore={handleUploadSuccess} />
+          <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+            <label htmlFor="language-select" style={{ color: '#1e3a8a', fontWeight: 700, marginRight: '0.5rem' }}>
+              Language
+            </label>
+            <select
+              id="language-select"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+              style={{ border: '1px solid #93c5fd', borderRadius: '8px', padding: '0.45rem', color: '#1e3a8a' }}
+            >
+              <option value="english">English</option>
+              <option value="hindi">हिंदी</option>
+              <option value="hinglish">Hinglish</option>
+            </select>
+          </div>
+          <WonderList onExplore={handleUploadSuccess} language={language} />
           <Quiz review />
-          <PhotoCapture onUploadSuccess={handleUploadSuccess} />
+          <PhotoCapture onUploadSuccess={handleUploadSuccess} language={language} />
         </>
       ) : (
         <div style={{
@@ -115,7 +131,7 @@ export default function App() {
                 )}
               </div>
               <Quiz objectName={result.objectName} />
-              <Story objectName={result.objectName} />
+              <Story objectName={result.objectName} language={result.language || language} />
             </>
           ) : (
             <div style={{ textAlign: 'center' }}>
