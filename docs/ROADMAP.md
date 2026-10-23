@@ -64,3 +64,9 @@ npm test
 These checks cover health, capture validation, quiz/story request validation,
 parent authorization, and signed parent-token handling without requiring a
 running AI service or MongoDB instance.
+
+## Privacy controls
+
+Parent-authenticated history now supports JSON export, deletion of one entry,
+and deletion of all entries. The dashboard confirms destructive actions before
+making the request.

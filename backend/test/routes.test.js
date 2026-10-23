@@ -55,6 +55,16 @@ test('parent history rejects missing and invalid authorization', async () => {
   assert.equal(invalid.body.error, 'PARENT_AUTH_REQUIRED');
 });
 
+test('history privacy endpoints require parent authorization', async () => {
+  const exportResponse = await request(app).get('/api/history/export');
+  const deleteAllResponse = await request(app).delete('/api/history');
+  const deleteOneResponse = await request(app).delete('/api/history/507f1f77bcf86cd799439011');
+
+  assert.equal(exportResponse.status, 401);
+  assert.equal(deleteAllResponse.status, 401);
+  assert.equal(deleteOneResponse.status, 401);
+});
+
 test('parent auth middleware accepts a valid signed token', () => {
   const token = createParentToken();
   let nextCalled = false;

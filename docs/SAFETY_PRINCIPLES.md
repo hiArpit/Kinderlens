@@ -16,3 +16,5 @@
    through the protected Parent Dashboard.
 8. **Failures are explicit.** Service, grounding, and validation failures must
    show a friendly recovery message and must not become invented content.
+9. **Parent data controls are explicit.** History export and deletion require
+   parent authentication and destructive actions require confirmation.

@@ -13,6 +13,7 @@ function ParentDashboard({ onClose }) {
   const [history, setHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('highlights');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ function ParentDashboard({ onClose }) {
     const loadHistory = async () => {
       setIsLoading(true);
       setError('');
+      setNotice('');
       try {
         const response = await fetch('/api/history', {
           headers: { Authorization: `Bearer ${token}` },
@@ -82,6 +84,68 @@ function ParentDashboard({ onClose }) {
     setHistory([]);
   };
 
+  const deleteEntry = async (entryId) => {
+    if (!window.confirm('Delete this learning entry? This cannot be undone.')) return;
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/history/${entryId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Could not delete this entry.');
+      setHistory((current) => current.filter((entry) => entry._id !== entryId));
+      setNotice('The learning entry was deleted.');
+    } catch (deleteError) {
+      setError(deleteError.message);
+    }
+  };
+
+  const deleteAllHistory = async () => {
+    if (!window.confirm('Delete all learning history? This cannot be undone.')) return;
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch('/api/history', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Could not delete history.');
+      setHistory([]);
+      setNotice(`${data.deletedCount || 0} learning entries were deleted.`);
+    } catch (deleteError) {
+      setError(deleteError.message);
+    }
+  };
+
+  const exportHistory = async () => {
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch('/api/history/export', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Could not export history.');
+      }
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = 'kinderlens-history.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+      setNotice('Your learning history export is ready.');
+    } catch (exportError) {
+      setError(exportError.message);
+    }
+  };
+
   if (!token) {
     return (
       <section className="parent-card parent-gate">
@@ -117,6 +181,8 @@ function ParentDashboard({ onClose }) {
           <span className="eyebrow">Parent view</span>
           <h2>Learning Journal</h2>
         </div>
+        {error && <p className="parent-error" role="alert">{error}</p>}
+        {notice && <p className="parent-notice" role="status">{notice}</p>}
         <div className="parent-actions">
           <button type="button" className="parent-link-button" onClick={lock}>Lock</button>
           <button type="button" className="parent-link-button" onClick={onClose}>Child view</button>
@@ -174,6 +240,13 @@ function ParentDashboard({ onClose }) {
                         </a>
                       )}
                       {entry.readability && <small>Reading grade {entry.readability.gradeLevel}</small>}
+                      <button
+                        type="button"
+                        className="parent-danger-button"
+                        onClick={() => deleteEntry(entry._id)}
+                      >
+                        Delete entry
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -186,6 +259,18 @@ function ParentDashboard({ onClose }) {
               <div className="safety-note">
                 <strong>Privacy and safety</strong>
                 <p>Only analyzed results are stored. Raw photos are not saved in the history database.</p>
+              </div>
+              <div className="privacy-actions">
+                <h3>Manage history</h3>
+                <p className="parent-muted">Export a copy before deleting if you want to keep a record.</p>
+                <div className="parent-actions">
+                  <button type="button" className="parent-primary-button" onClick={exportHistory}>
+                    Export history
+                  </button>
+                  <button type="button" className="parent-danger-button" onClick={deleteAllHistory}>
+                    Delete all history
+                  </button>
+                </div>
               </div>
               <h3>Flagged interactions</h3>
               {unsafe.length === 0 ? <p className="parent-muted">No safety flags recorded.</p> : (
