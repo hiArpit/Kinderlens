@@ -4,8 +4,13 @@ const interactionLogSchema = new mongoose.Schema(
   {
     outcome: {
       type: String,
-      enum: ['identified', 'unidentified', 'unsafe'],
+      enum: ['identified', 'unidentified', 'unsafe', 'quiz'],
       required: true,
+    },
+    activityType: {
+      type: String,
+      enum: ['exploration', 'quiz'],
+      default: 'exploration',
     },
     objectName: {
       type: String,
@@ -63,6 +68,16 @@ const interactionLogSchema = new mongoose.Schema(
     needsClearerImage: {
       type: Boolean,
       default: false,
+    },
+    quiz: {
+      questionCount: {
+        type: Number,
+        default: null,
+      },
+      score: {
+        type: Number,
+        default: null,
+      },
     },
   },
   {

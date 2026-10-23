@@ -70,6 +70,23 @@ RULES:
 Return ONLY valid JSON.
 """
 
+QUIZ_PROMPT = """Create a short quiz for children ages 6 to 8 about "{object_name}".
+Use ONLY facts stated in the verified reference text below.
+Create exactly 3 multiple-choice questions. Each question must have exactly 3
+answer options, and "answer" must be the zero-based index of the correct option.
+Use simple words. Do not use trick questions, unsafe topics, or facts not in the text.
+
+VERIFIED REFERENCE TEXT:
+{reference_text}
+
+Return ONLY valid JSON in this shape:
+{{
+  "questions": [
+    {{"question": "...", "options": ["...", "...", "..."], "answer": 0}}
+  ]
+}}
+"""
+
 
 def evaluate_readability(text: str) -> dict:
     if not text:
@@ -81,6 +98,100 @@ def evaluate_readability(text: str) -> dict:
         "reading_ease": round(ease, 1),
         "age_appropriate": grade <= MAX_CHILD_GRADE_LEVEL
     }
+
+
+def generate_quiz(object_name: str) -> dict:
+    try:
+        grounding_info = fetch_grounding_text(object_name)
+        if not grounding_info.get("grounded") or not grounding_info.get("extract"):
+            return {
+                "success": True,
+                "object_name": None,
+                "questions": [],
+                "grounding": {"grounded": False, "source_title": None, "source_url": None},
+                "is_safe": True,
+                "confidence_note": "I could not find enough trusted information to make a quiz yet.",
+                "error": None,
+            }
+
+        prompt = QUIZ_PROMPT.format(
+            object_name=object_name,
+            reference_text=grounding_info["extract"]
+        )
+        completion_result = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            max_tokens=300,
+            temperature=0.1
+        )
+        parsed = json.loads(completion_result.choices[0].message.content.strip())
+        questions = parsed.get("questions")
+        if not isinstance(questions, list) or len(questions) != 3:
+            raise ValueError("Quiz response must contain exactly three questions.")
+
+        normalized_questions = []
+        text_to_check = []
+        for question in questions:
+            if not isinstance(question, dict):
+                raise ValueError("Quiz question has an invalid shape.")
+            prompt_text = question.get("question")
+            options = question.get("options")
+            answer = question.get("answer")
+            if (
+                not isinstance(prompt_text, str)
+                or not prompt_text.strip()
+                or not isinstance(options, list)
+                or len(options) != 3
+                or not all(isinstance(option, str) and option.strip() for option in options)
+                or not isinstance(answer, int)
+                or answer < 0
+                or answer >= len(options)
+            ):
+                raise ValueError("Quiz question failed validation.")
+            normalized_questions.append({
+                "question": prompt_text.strip(),
+                "options": [option.strip() for option in options],
+                "answer": answer,
+            })
+            text_to_check.extend([prompt_text, *options])
+
+        is_safe, violations = inspect_safety_completion(text_to_check)
+        if not is_safe:
+            return {
+                "success": True,
+                "object_name": None,
+                "questions": [],
+                "grounding": None,
+                "is_safe": False,
+                "confidence_note": "Quiz content was blocked by the safety gate.",
+                "error": "; ".join(violations),
+            }
+
+        return {
+            "success": True,
+            "object_name": object_name,
+            "questions": normalized_questions,
+            "grounding": {
+                "grounded": True,
+                "source_title": grounding_info.get("source_title"),
+                "source_url": grounding_info.get("source_url"),
+            },
+            "is_safe": True,
+            "confidence_note": None,
+            "error": None,
+        }
+    except Exception as error:
+        logger.exception("Quiz generation failed")
+        return {
+            "success": False,
+            "object_name": None,
+            "questions": [],
+            "grounding": None,
+            "is_safe": True,
+            "confidence_note": None,
+            "error": str(error),
+        }
 
 
 def explain_object_name(object_name: str) -> dict:

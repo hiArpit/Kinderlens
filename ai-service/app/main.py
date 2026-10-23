@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.vision_model import analyze_image_buffer, explain_object_name
-from app.schemas.vision import VisionRecognitionResponse
+from app.core.vision_model import analyze_image_buffer, explain_object_name, generate_quiz
+from app.schemas.vision import VisionRecognitionResponse, QuizResponse
 
 app = FastAPI(title="KinderLens AI Service", version="0.1.0")
 
@@ -36,3 +36,11 @@ async def explain_object(payload: dict):
     if not isinstance(object_name, str) or not object_name.strip():
         raise HTTPException(status_code=400, detail="Object name is required.")
     return explain_object_name(object_name.strip())
+
+
+@app.post("/api/quiz", response_model=QuizResponse)
+async def create_quiz(payload: dict):
+    object_name = payload.get("object_name") if isinstance(payload, dict) else None
+    if not isinstance(object_name, str) or not object_name.strip():
+        raise HTTPException(status_code=400, detail="Object name is required.")
+    return generate_quiz(object_name.strip())

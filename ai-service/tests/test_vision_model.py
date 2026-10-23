@@ -15,6 +15,47 @@ def completion(payload):
 class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
+    def test_quiz_uses_grounding_and_validates_questions(self, create, fetch_grounding):
+        create.return_value = completion({
+            "questions": [
+                {"question": "What does a book have?", "options": ["Pages", "Wheels", "Wings"], "answer": 0},
+                {"question": "What can books share?", "options": ["Ideas", "Rain", "Music"], "answer": 0},
+                {"question": "What might a book have?", "options": ["Pictures", "Engines", "Roots"], "answer": 0},
+            ]
+        })
+        fetch_grounding.return_value = {
+            "grounded": True,
+            "source_title": "Book",
+            "source_url": "https://en.wikipedia.org/wiki/Book",
+            "extract": "A book is a set of pages with words or pictures.",
+        }
+
+        result = vision_model.generate_quiz("Book")
+
+        self.assertTrue(result["success"])
+        self.assertEqual(len(result["questions"]), 3)
+        self.assertEqual(result["questions"][0]["answer"], 0)
+        self.assertTrue(result["grounding"]["grounded"])
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
+    def test_quiz_grounding_failure_blocks_generation(self, create, fetch_grounding):
+        fetch_grounding.return_value = {
+            "grounded": False,
+            "source_title": None,
+            "source_url": None,
+            "extract": None,
+        }
+
+        result = vision_model.generate_quiz("Unknown object")
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["questions"], [])
+        self.assertFalse(result["grounding"]["grounded"])
+        create.assert_not_called()
+
+    @patch.object(vision_model, "fetch_grounding_text")
+    @patch.object(vision_model.client.chat.completions, "create")
     def test_named_object_explanation_uses_grounding(self, create, fetch_grounding):
         create.return_value = completion({
             "kid_summary": "The Moon goes around Earth. It shines in the night sky.",
