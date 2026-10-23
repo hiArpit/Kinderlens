@@ -13,6 +13,11 @@ def completion(payload):
 
 
 class VisionModelTests(unittest.TestCase):
+    def test_child_prompts_require_plain_language_definitions(self):
+        self.assertIn("explain it immediately in simple words", vision_model.CHILD_GROUNDED_SYNTHESIS_PROMPT)
+        self.assertIn("Explain every science, history, or subject word", vision_model.STORY_PROMPT)
+        self.assertIn("fossil fuels", vision_model.STORY_PROMPT)
+
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
     def test_story_uses_grounding_and_returns_paragraphs(self, create, fetch_grounding):

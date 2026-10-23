@@ -53,17 +53,23 @@ VERIFIED REFERENCE TEXT:
 
 RULES:
 1. AGE CALIBRATION (Ages 6-8):
-   - Short sentences (6 to 10 words each).
-   - High-frequency, elementary words.
-   - Grounded physical analogy that matches the reference text.
+   - Give 3 clear sentences for the summary, not just a label.
+   - Use common elementary words and short sentences.
+   - You may use 10 to 16 words when needed to explain an idea clearly.
+   - If a science or history word is needed, explain it immediately in simple words.
+     Example: "A fossil is an old mark or piece of a living thing found in rock."
+   - Never use a difficult word by itself when a simpler word will work.
+   - Do not mention unrelated technical terms, such as fossil fuels, unless the
+     reference text directly explains them and the child-friendly meaning is included.
+   - Add a grounded physical analogy only when it matches the reference text.
 2. STRICT SAFETY:
    - Zero persona or roleplay: Never say "I", "me", "my", or "friend".
    - No open conversation or personal questions.
 3. OUTPUT FORMAT:
    Return a JSON object:
    {{
-     "kid_summary": "2 short, clear sentences explaining what this is and what it does based on the text.",
-     "fun_fact": "1 simple, verifiable fact taken directly from the text.",
+     "kid_summary": "3 short, clear sentences explaining what this is, what it does, and one useful detail based on the text.",
+     "fun_fact": "1 or 2 simple, verifiable sentences taken directly from the text.",
      "action_prompt": "1 safe physical observation activity (e.g., look for a shape, count buttons, or notice a color)."
    }}
 
@@ -104,7 +110,12 @@ Return ONLY valid JSON:
 STORY_PROMPT = """Create a short learning story for children ages 6 to 8 about "{object_name}".
 Use ONLY facts stated in the verified reference text below. The story may use gentle
 imaginary framing, but it must not invent factual claims about the object.
-Write exactly 4 short paragraphs. Use simple words and keep each paragraph to 1 or 2 sentences.
+Write exactly 4 short paragraphs. Use simple words and keep each paragraph to 2 or 3 short sentences.
+Explain every science, history, or subject word the first time it appears.
+For example, write "A fossil is an old mark or piece of life found in rock."
+Do not use a difficult word alone when a simple word will work.
+Do not mention unrelated technical ideas, such as fossil fuels, unless the reference
+text directly explains them and the child-friendly meaning is included.
 Do not use scary, unsafe, violent, or roleplay language. Do not ask the child questions.
 
 VERIFIED REFERENCE TEXT:
