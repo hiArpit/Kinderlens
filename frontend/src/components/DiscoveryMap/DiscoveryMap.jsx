@@ -27,6 +27,41 @@ const connections = {
     { icon: '🌋', label: 'Earth', detail: 'A changing home for life' },
     { icon: '🦕', label: 'Animals', detail: 'Many kinds of living things' },
   ],
+  animals: [
+    { icon: '🦁', label: 'Habitats', detail: 'Places where animals live' },
+    { icon: '🍎', label: 'Food', detail: 'What animals need to grow' },
+    { icon: '🐾', label: 'Mammals', detail: 'Animals that feed babies milk' },
+  ],
+  habitats: [
+    { icon: '🌳', label: 'Forest', detail: 'A leafy home for many animals' },
+    { icon: '🌊', label: 'Ocean', detail: 'A watery home for sea life' },
+    { icon: '🏜️', label: 'Desert', detail: 'A dry home with little rain' },
+  ],
+  food: [
+    { icon: '🌿', label: 'Plants', detail: 'Food made by growing things' },
+    { icon: '🐛', label: 'Insects', detail: 'Small animals in many food chains' },
+    { icon: '🦷', label: 'Teeth', detail: 'Teeth help animals eat' },
+  ],
+  mammals: [
+    { icon: '🍼', label: 'Babies', detail: 'Mammal babies drink milk' },
+    { icon: '🫁', label: 'Breathing', detail: 'Mammals breathe air' },
+    { icon: '🦴', label: 'Bones', detail: 'A skeleton supports the body' },
+  ],
+  forest: [
+    { icon: '🌳', label: 'Trees', detail: 'Trees make a forest home' },
+    { icon: '🦉', label: 'Birds', detail: 'Birds build homes in branches' },
+    { icon: '🐾', label: 'Tracks', detail: 'Footprints reveal animal visitors' },
+  ],
+  desert: [
+    { icon: '🌵', label: 'Cactus', detail: 'Plants that save water' },
+    { icon: '🐪', label: 'Camels', detail: 'Animals adapted to dry places' },
+    { icon: '🌙', label: 'Night', detail: 'Some desert animals come out at night' },
+  ],
+  insects: [
+    { icon: '🐝', label: 'Bees', detail: 'Helpful pollinators' },
+    { icon: '🦋', label: 'Butterflies', detail: 'Insects with colourful wings' },
+    { icon: '🐜', label: 'Ants', detail: 'Tiny insects that work together' },
+  ],
   rainbow: [
     { icon: '💧', label: 'Water', detail: 'Tiny drops split the light' },
     { icon: '☀️', label: 'Light', detail: 'Sunlight has many colours' },
@@ -97,11 +132,7 @@ const connections = {
     { icon: '🌊', label: 'Ocean', detail: 'Waves travel across the ocean' },
     { icon: '🏖️', label: 'Shore', detail: 'Waves reach the shore' },
   ],
-  fossils: [
-    { icon: '🦴', label: 'Bones', detail: 'Bones can leave fossil clues' },
-    { icon: '🪨', label: 'Rocks', detail: 'Fossils are found in rock' },
-    { icon: '⏳', label: 'History', detail: 'Fossils tell stories from long ago' },
-  ],
+
   heat: [
     { icon: '🔥', label: 'Fire', detail: 'Fire gives off heat and light' },
     { icon: '☀️', label: 'Sun', detail: 'The Sun warms our planet' },
@@ -111,6 +142,106 @@ const connections = {
     { icon: '🪨', label: 'Minerals', detail: 'Rocks are made from minerals' },
     { icon: '🌋', label: 'Volcano', detail: 'Lava can cool into rock' },
     { icon: '🦴', label: 'Fossils', detail: 'Some rocks hold ancient clues' },
+  ],
+  earth: [
+    { icon: '🌍', label: 'Planet', detail: 'Earth is our home in space' },
+    { icon: '🌋', label: 'Volcano', detail: 'Openings can release hot rock' },
+    { icon: '🪨', label: 'Rocks', detail: 'Earth is covered with rocks and soil' },
+  ],
+  planet: [
+    { icon: '🌍', label: 'Earth', detail: 'A planet with air and life' },
+    { icon: '🌙', label: 'Moon', detail: 'A natural neighbour of Earth' },
+    { icon: '☀️', label: 'Sun', detail: 'Our star gives Earth light' },
+  ],
+  fossils: [
+    { icon: '🦴', label: 'Bones', detail: 'Bones can leave fossil clues' },
+    { icon: '🪨', label: 'Rocks', detail: 'Fossils are found in rock' },
+    { icon: '⏳', label: 'History', detail: 'Fossils tell stories from long ago' },
+  ],
+  history: [
+    { icon: '⏳', label: 'Time', detail: 'History helps us learn from the past' },
+    { icon: '🏛️', label: 'Civilizations', detail: 'People built communities long ago' },
+    { icon: '🗺️', label: 'Archaeology', detail: 'Clues help us understand the past' },
+  ],
+  pyramid: [
+    { icon: '🏛️', label: 'History', detail: 'A clue from an ancient time' },
+    { icon: '🧱', label: 'Building', detail: 'Large stones can form structures' },
+    { icon: '🗺️', label: 'Egypt', detail: 'Pyramids were built in Egypt' },
+  ],
+  building: [
+    { icon: '🧱', label: 'Materials', detail: 'Buildings use many materials' },
+    { icon: '📐', label: 'Shapes', detail: 'Shapes help structures stay strong' },
+    { icon: '🏛️', label: 'Architecture', detail: 'The art of designing buildings' },
+  ],
+  materials: [
+    { icon: '🪨', label: 'Stone', detail: 'A strong natural building material' },
+    { icon: '🪵', label: 'Wood', detail: 'A useful material from trees' },
+    { icon: '🧱', label: 'Bricks', detail: 'Small blocks can build walls' },
+  ],
+  shapes: [
+    { icon: '🔺', label: 'Triangles', detail: 'Strong shapes with three sides' },
+    { icon: '⚪', label: 'Circles', detail: 'Shapes with no corners' },
+    { icon: '⬛', label: 'Squares', detail: 'Shapes with four equal sides' },
+  ],
+  architecture: [
+    { icon: '🏠', label: 'Homes', detail: 'Places people design to live in' },
+    { icon: '🌉', label: 'Bridges', detail: 'Structures that cross gaps' },
+    { icon: '📐', label: 'Shapes', detail: 'Shapes help designers plan' },
+  ],
+  egypt: [
+    { icon: '🏜️', label: 'Desert', detail: 'A dry landscape around the pyramids' },
+    { icon: '🌊', label: 'Nile', detail: 'A river that helped people live' },
+    { icon: '⏳', label: 'History', detail: 'Clues from an ancient civilization' },
+  ],
+  beehive: [
+    { icon: '🐝', label: 'Bees', detail: 'Busy insects that live together' },
+    { icon: '🍯', label: 'Honey', detail: 'Bees make honey from flower nectar' },
+    { icon: '⬡', label: 'Honeycomb', detail: 'Wax cells store food and raise babies' },
+  ],
+  bees: [
+    { icon: '🌼', label: 'Flowers', detail: 'Bees visit flowers for nectar' },
+    { icon: '🌱', label: 'Pollination', detail: 'Bees help plants make seeds' },
+    { icon: '🍯', label: 'Honey', detail: 'Bees make honey for their hive' },
+  ],
+  honey: [
+    { icon: '🌼', label: 'Flowers', detail: 'Nectar begins with flowers' },
+    { icon: '🐝', label: 'Bees', detail: 'Bees collect nectar' },
+    { icon: '🍯', label: 'Food', detail: 'Honey is a sweet food' },
+  ],
+  honeycomb: [
+    { icon: '⬡', label: 'Hexagons', detail: 'Six-sided shapes fit together' },
+    { icon: '🐝', label: 'Bees', detail: 'Bees build honeycomb with wax' },
+    { icon: '🍯', label: 'Honey', detail: 'Cells store honey safely' },
+  ],
+  flowers: [
+    { icon: '🌼', label: 'Nectar', detail: 'A sweet drink for pollinators' },
+    { icon: '🌱', label: 'Seeds', detail: 'Flowers can make new plants' },
+    { icon: '🐝', label: 'Bees', detail: 'Bees visit flowers to collect food' },
+  ],
+  pollination: [
+    { icon: '🌼', label: 'Flowers', detail: 'Flowers make pollen and nectar' },
+    { icon: '🐝', label: 'Bees', detail: 'Bees carry pollen between flowers' },
+    { icon: '🌱', label: 'Seeds', detail: 'Pollination helps plants make seeds' },
+  ],
+  telescope: [
+    { icon: '🔭', label: 'Science', detail: 'A tool for asking sky questions' },
+    { icon: '🌌', label: 'Space', detail: 'A telescope helps us see far away' },
+    { icon: '⭐', label: 'Stars', detail: 'Distant lights in the night sky' },
+  ],
+  science: [
+    { icon: '🔍', label: 'Observe', detail: 'Look closely and notice patterns' },
+    { icon: '❓', label: 'Questions', detail: 'Curiosity starts an investigation' },
+    { icon: '🧪', label: 'Experiments', detail: 'Try a safe way to test an idea' },
+  ],
+  coral: [
+    { icon: '🌊', label: 'Ocean', detail: 'Coral reefs grow in warm seas' },
+    { icon: '🐠', label: 'Animals', detail: 'Many sea animals live near reefs' },
+    { icon: '🪸', label: 'Reefs', detail: 'Tiny coral animals build big homes' },
+  ],
+  reefs: [
+    { icon: '🐠', label: 'Fish', detail: 'Colourful animals live around reefs' },
+    { icon: '🌊', label: 'Ocean', detail: 'Reefs are part of the ocean' },
+    { icon: '🛡️', label: 'Protection', detail: 'Reefs shelter many sea animals' },
   ],
   volcano: [
     { icon: '🌋', label: 'Earth', detail: 'Our planet is always changing' },
