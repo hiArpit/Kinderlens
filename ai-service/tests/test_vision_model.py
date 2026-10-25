@@ -164,14 +164,17 @@ class VisionModelTests(unittest.TestCase):
     def test_named_object_explanation_uses_grounding(self, create, fetch_grounding):
         create.side_effect = [
             completion({"facts": ["The Moon is Earth's natural satellite.", "The Moon goes around Earth.", "The Moon can be seen from Earth."]}),
-            completion({
-                "kid_summary": "The Moon goes around Earth. It is a natural satellite.",
-                "fun_fact": "We can see the Moon from Earth.",
-                "action_prompt": "Look for the Moon tonight.",
-                "vocabulary": [
-                    {"term": "natural satellite", "meaning": "A space object that travels around a planet."},
-                ],
-            }),
+            *[
+                completion({
+                    "kid_summary": "The Moon goes around Earth. It is a natural satellite.",
+                    "fun_fact": "We can see the Moon from Earth.",
+                    "action_prompt": "Look for the Moon tonight.",
+                    "vocabulary": [
+                        {"term": "natural satellite", "meaning": "A space object that travels around a planet."},
+                    ],
+                })
+                for _ in range(3)
+            ],
         ]
         fetch_grounding.return_value = {
             "grounded": True,
