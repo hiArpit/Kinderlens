@@ -162,12 +162,19 @@ SOURCE TEXT:
         max_tokens=250,
         temperature=0.0,
     )
-    facts = json.loads(result.choices[0].message.content.strip()).get("facts")
+    try:
+        payload = json.loads(result.choices[0].message.content.strip())
+    except (AttributeError, json.JSONDecodeError, TypeError):
+        logger.warning("Fact extraction returned invalid JSON for object=%r", object_name)
+        return ""
+    facts = payload.get("facts") if isinstance(payload, dict) else None
     if not isinstance(facts, list):
-        raise ValueError("Fact extraction did not return a list.")
+        logger.warning("Fact extraction returned no facts for object=%r", object_name)
+        return ""
     facts = [fact.strip() for fact in facts if isinstance(fact, str) and fact.strip()]
     if not 3 <= len(facts) <= 5:
-        raise ValueError("Fact extraction must return 3 to 5 usable facts.")
+        logger.warning("Fact extraction returned %d usable facts for object=%r", len(facts), object_name)
+        return ""
     return "\n".join("- " + fact for fact in facts)
 
 
@@ -208,8 +215,18 @@ def _generate_child_explanation(object_name: str, facts_text: str, language: str
         if not safe:
             return {"blocked": True, "violations": violations, "readability": readability}
         # Flesch-Kincaid is calibrated for English, so only use its grade threshold for English.
-        grade_passes = language != "english" or readability["grade_level"] <= TARGET_CHILD_GRADE_LEVEL
+        grade = readability["grade_level"]
+        grade_passes = language != "english" or grade <= TARGET_CHILD_GRADE_LEVEL
+        within_hard_ceiling = language != "english" or grade <= MAX_CHILD_GRADE_LEVEL
         if grade_passes and not mixed_hindi:
+            return {
+                "blocked": False, "kid_summary": summary, "fun_fact": fact,
+                "action_prompt": action, "vocabulary": vocabulary, "readability": readability,
+            }
+        # After retries, allow text under the documented hard ceiling instead of
+        # rejecting every explanation that misses the ideal Grade 1-2 target.
+        if attempt == 3 and within_hard_ceiling and not mixed_hindi:
+            logger.warning("Explanation accepted under hard ceiling after retries object=%r grade=%s", object_name, grade)
             return {
                 "blocked": False, "kid_summary": summary, "fun_fact": fact,
                 "action_prompt": action, "vocabulary": vocabulary, "readability": readability,
@@ -560,6 +577,15 @@ def explain_object_name(object_name: str, language: str = "english") -> dict:
             }
 
         child_facts = _extract_child_facts(object_name, grounding_info["extract"])
+        if not child_facts:
+            return {
+                "success": True, "identified": False, "is_safe": True,
+                "safety_flag_reason": None, "object_name": None, "kid_summary": None,
+                "fun_fact": None, "action_prompt": None, "readability": None,
+                "grounding": {"grounded": False, "source_title": None, "source_url": None},
+                "confidence_note": "I could not verify enough trusted facts about this item yet.",
+                "error": None, "language": language,
+            }
         generated = _generate_child_explanation(object_name, child_facts, language)
         if generated.get("too_complex"):
             return {
@@ -767,6 +793,16 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg", lang
 
         # Step D: Extract source-bound facts, then generate and validate the explanation.
         child_facts = _extract_child_facts(object_name, ref_text)
+        if not child_facts:
+            return {
+                "success": True, "identified": False, "is_safe": True,
+                "safety_flag_reason": None, "object_name": None, "kid_summary": None,
+                "fun_fact": None, "action_prompt": None, "readability": None,
+                "grounding": {"grounded": False, "source_title": None, "source_url": None},
+                "possible_objects": possible_objects, "needs_clearer_image": False,
+                "confidence_note": "I could not verify enough trusted facts about this item yet.",
+                "error": None, "language": language,
+            }
         generated = _generate_child_explanation(object_name, child_facts, language)
         if generated.get("too_complex"):
             return {
