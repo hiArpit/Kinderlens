@@ -16,7 +16,8 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # Use a current production vision model. The former Llama 3.2 preview model
 # is no longer available through Groq.
 VISION_MODEL = "qwen/qwen3.8-27b"
-MAX_CHILD_GRADE_LEVEL = 4.0
+TARGET_CHILD_GRADE_LEVEL = 2.0
+MAX_CHILD_GRADE_LEVEL = 6.0
 
 OBJECT_DETECTION_PROMPT = """Analyze this image. Perform two steps:
 1. SAFETY CHECK:
@@ -207,7 +208,7 @@ def _generate_child_explanation(object_name: str, facts_text: str, language: str
         if not safe:
             return {"blocked": True, "violations": violations, "readability": readability}
         # Flesch-Kincaid is calibrated for English, so only use its grade threshold for English.
-        grade_passes = language != "english" or readability["grade_level"] <= MAX_CHILD_GRADE_LEVEL
+        grade_passes = language != "english" or readability["grade_level"] <= TARGET_CHILD_GRADE_LEVEL
         if grade_passes and not mixed_hindi:
             return {
                 "blocked": False, "kid_summary": summary, "fun_fact": fact,
