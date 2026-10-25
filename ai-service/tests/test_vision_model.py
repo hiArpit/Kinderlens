@@ -16,12 +16,15 @@ class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
     def test_named_object_explanation_passes_selected_language(self, create, fetch_grounding):
-        create.return_value = completion({
-            "kid_summary": "चंद्रमा पृथ्वी के चारों ओर घूमता है।",
-            "fun_fact": "चंद्रमा एक प्राकृतिक उपग्रह है।",
-            "action_prompt": "आज रात चंद्रमा को देखो।",
-            "vocabulary": [],
-        })
+        create.side_effect = [
+            completion({"facts": ["The Moon is Earth's natural satellite.", "The Moon goes around Earth.", "The Moon is seen in the night sky."]}),
+            completion({
+                "kid_summary": "चंद्रमा पृथ्वी के चारों ओर घूमता है।",
+                "fun_fact": "चंद्रमा एक प्राकृतिक उपग्रह है।",
+                "action_prompt": "आज रात चंद्रमा को देखो।",
+                "vocabulary": [],
+            }),
+        ]
         fetch_grounding.return_value = {
             "grounded": True,
             "source_title": "Moon",
@@ -32,7 +35,7 @@ class VisionModelTests(unittest.TestCase):
         result = vision_model.explain_object_name("Moon", "hindi")
 
         self.assertEqual(result["language"], "hindi")
-        self.assertIn("Devanagari", create.call_args.kwargs["messages"][0]["content"])
+        self.assertIn("Devanagari", create.call_args_list[-1].kwargs["messages"][0]["content"])
 
     def test_child_prompts_require_plain_language_definitions(self):
         self.assertIn("explain it immediately in simple words", vision_model.CHILD_GROUNDED_SYNTHESIS_PROMPT)
@@ -159,14 +162,17 @@ class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
     def test_named_object_explanation_uses_grounding(self, create, fetch_grounding):
-        create.return_value = completion({
-            "kid_summary": "The Moon is Earth's natural satellite. It goes around Earth.",
-            "fun_fact": "The Moon is Earth's space neighbor.",
-            "action_prompt": "Look for the Moon tonight.",
-            "vocabulary": [
-                {"term": "natural satellite", "meaning": "A space object that travels around a planet."},
-            ],
-        })
+        create.side_effect = [
+            completion({"facts": ["The Moon is Earth's natural satellite.", "The Moon goes around Earth.", "The Moon can be seen from Earth."]}),
+            completion({
+                "kid_summary": "The Moon goes around Earth. It is a natural satellite.",
+                "fun_fact": "We can see the Moon from Earth.",
+                "action_prompt": "Look for the Moon tonight.",
+                "vocabulary": [
+                    {"term": "natural satellite", "meaning": "A space object that travels around a planet."},
+                ],
+            }),
+        ]
         fetch_grounding.return_value = {
             "grounded": True,
             "source_title": "Moon",
@@ -185,11 +191,24 @@ class VisionModelTests(unittest.TestCase):
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
     def test_named_object_explanation_keeps_overage_readability_visible(self, create, fetch_grounding):
-        create.return_value = completion({
-            "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
-            "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
-            "action_prompt": "Compare their body structures.",
-        })
+        create.side_effect = [
+            completion({"facts": ["Dinosaurs were reptiles.", "Different kinds of dinosaurs lived long ago.", "Some dinosaurs ate plants."]}),
+            completion({
+                "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
+                "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
+                "action_prompt": "Compare their body structures.",
+            }),
+            completion({
+                "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
+                "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
+                "action_prompt": "Compare their body structures.",
+            }),
+            completion({
+                "kid_summary": "Dinosaurs were warm-blooded reptiles with complex biological adaptations.",
+                "fun_fact": "Their evolutionary lineage includes numerous specialized species.",
+                "action_prompt": "Compare their body structures.",
+            }),
+        ]
         fetch_grounding.return_value = {
             "grounded": True,
             "source_title": "Dinosaur",
@@ -203,7 +222,7 @@ class VisionModelTests(unittest.TestCase):
         self.assertTrue(result["identified"])
         self.assertFalse(result["readability"]["age_appropriate"])
         self.assertEqual(result["object_name"], "Dinosaur")
-        self.assertEqual(create.call_count, 1)
+        self.assertEqual(create.call_count, 4)
 
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
@@ -243,6 +262,7 @@ class VisionModelTests(unittest.TestCase):
                 "possible_objects": ["Book"],
                 "needs_clearer_image": False,
             }),
+            completion({"facts": ["A book has pages.", "Books can have words.", "Some books have pictures."]}),
             completion({
                 "kid_summary": "Books have pages. They share ideas.",
                 "fun_fact": "Some books have pictures.",
@@ -262,7 +282,7 @@ class VisionModelTests(unittest.TestCase):
         self.assertTrue(result["identified"])
         self.assertTrue(result["grounding"]["grounded"])
         self.assertEqual(result["object_name"], "Book")
-        self.assertEqual(create.call_count, 2)
+        self.assertEqual(create.call_count, 3)
 
     @patch.object(vision_model, "fetch_grounding_text")
     @patch.object(vision_model.client.chat.completions, "create")
