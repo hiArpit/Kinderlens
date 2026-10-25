@@ -68,9 +68,7 @@ export default function Story({ objectName, language = 'english', childProfileId
               <VocabularyText text={paragraph} vocabulary={story.vocabulary} />
             </p>
           ))}
-          {story.grounding?.source_url && (
-            <small><a href={story.grounding.source_url} target="_blank" rel="noreferrer">📖 Source for grown-ups: {story.grounding.source_title}</a></small>
-          )}
+          <small>📖 Facts verified via {story.grounding?.source_title}</small>
         </article>
       )}
     </section>
