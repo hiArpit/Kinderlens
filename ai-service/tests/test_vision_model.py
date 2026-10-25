@@ -219,9 +219,10 @@ class VisionModelTests(unittest.TestCase):
         result = vision_model.explain_object_name("Dinosaur")
 
         self.assertTrue(result["success"])
-        self.assertTrue(result["identified"])
+        self.assertFalse(result["identified"])
         self.assertFalse(result["readability"]["age_appropriate"])
-        self.assertEqual(result["object_name"], "Dinosaur")
+        self.assertIsNone(result["object_name"])
+        self.assertIn("Try a different item", result["confidence_note"])
         self.assertEqual(create.call_count, 4)
 
     @patch.object(vision_model, "fetch_grounding_text")
