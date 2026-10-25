@@ -175,7 +175,11 @@ function DiscoveryResult({ result, language, childProfileId, onReset }) {
         </div>
       )}
       <div className="result-meta">
-        <span>{result.grounding?.grounded ? `📖 ${result.grounding.source_title}` : '🔍 Direct observation'}</span>
+        {result.grounding?.grounded && result.grounding.source_url ? (
+          <a href={result.grounding.source_url} target="_blank" rel="noreferrer" aria-label={`Source for grown-ups: ${result.grounding.source_title}`}>
+            📖 Source for grown-ups: {result.grounding.source_title}
+          </a>
+        ) : <span>🔍 Direct observation</span>}
         {result.readability && <span>Grade {result.readability.grade_level}</span>}
       </div>
       <DiscoveryMap objectName={result.objectName} onReset={onReset} />
