@@ -146,6 +146,78 @@ def evaluate_readability(text: str) -> dict:
         "age_appropriate": grade <= MAX_CHILD_GRADE_LEVEL
     }
 
+def _extract_child_facts(object_name: str, source_text: str) -> str:
+    """Extract a small set of source-bound facts before child-facing synthesis."""
+    prompt = f"""Extract 3 to 5 short, child-relevant facts about {object_name} from the source text.
+Include what it is, what it does or how it is used, and one interesting detail if supported.
+Do not add outside knowledge. Return JSON only: {{"facts": ["fact 1", "fact 2", "fact 3"]}}
+
+SOURCE TEXT:
+{source_text}"""
+    result = client.chat.completions.create(
+        model=VISION_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
+        max_tokens=250,
+        temperature=0.0,
+    )
+    facts = json.loads(result.choices[0].message.content.strip()).get("facts")
+    if not isinstance(facts, list):
+        raise ValueError("Fact extraction did not return a list.")
+    facts = [fact.strip() for fact in facts if isinstance(fact, str) and fact.strip()]
+    if not 3 <= len(facts) <= 5:
+        raise ValueError("Fact extraction must return 3 to 5 usable facts.")
+    return "\n".join("- " + fact for fact in facts)
+
+
+def _has_mixed_hindi_script(text: str) -> bool:
+    import re
+    return bool(re.search(r"[A-Za-z]+[\u0900-\u097F]|[\u0900-\u097F]+[A-Za-z]+", text or ""))
+
+
+def _generate_child_explanation(object_name: str, facts_text: str, language: str) -> dict:
+    """Generate, grade, log, and retry explanation text up to three times."""
+    last_readability = None
+    for attempt in range(1, 4):
+        retry_note = "" if attempt == 1 else "\nPrevious attempt was too complex or mixed Hindi script. Use shorter, simpler sentences."
+        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
+            object_name=object_name, reference_text=facts_text
+        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}{retry_note}"
+        result = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            max_tokens=300,
+            temperature=0.1,
+        )
+        parsed = json.loads(result.choices[0].message.content.strip())
+        summary = parsed.get("kid_summary", "")
+        fact = parsed.get("fun_fact", "")
+        action = parsed.get("action_prompt", "")
+        vocabulary = normalize_vocabulary(parsed.get("vocabulary"), [summary, fact])
+        readability = evaluate_readability((summary + " " + fact).strip())
+        mixed_hindi = language == "hindi" and _has_mixed_hindi_script(" ".join([summary, fact, action]))
+        logger.info(
+            "Explanation grade check object=%r language=%s attempt=%d grade=%s ease=%s age_appropriate=%s mixed_hindi_script=%s",
+            object_name, language, attempt, readability["grade_level"], readability["reading_ease"],
+            readability["age_appropriate"] if language == "english" else "not_validated_for_language",
+            mixed_hindi,
+        )
+        safe, violations = inspect_safety_completion([summary, fact, action, *[item["meaning"] for item in vocabulary]])
+        if not safe:
+            return {"blocked": True, "violations": violations, "readability": readability}
+        # Flesch-Kincaid is calibrated for English, so only use its grade threshold for English.
+        grade_passes = language != "english" or readability["grade_level"] <= MAX_CHILD_GRADE_LEVEL
+        if grade_passes and not mixed_hindi:
+            return {
+                "blocked": False, "kid_summary": summary, "fun_fact": fact,
+                "action_prompt": action, "vocabulary": vocabulary, "readability": readability,
+            }
+        last_readability = readability
+    logger.warning("Explanation rejected after retries object=%r language=%s grade=%s", object_name, language, last_readability)
+    return {"blocked": False, "too_complex": True, "readability": last_readability}
+
+
 
 ALLOWED_QUESTION_COUNTS = {3, 5, 10}
 SUPPORTED_LANGUAGES = {"english", "hindi", "hinglish"}
@@ -486,28 +558,23 @@ def explain_object_name(object_name: str, language: str = "english") -> dict:
                 "error": None,
             }
 
-        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
-            object_name=object_name,
-            reference_text=grounding_info["extract"]
-        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
-        synthesis_completion = client.chat.completions.create(
-            model=VISION_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            max_tokens=300,
-            temperature=0.2
-        )
-        parsed_synth = json.loads(synthesis_completion.choices[0].message.content.strip())
-        kid_summary = parsed_synth.get("kid_summary", "")
-        fun_fact = parsed_synth.get("fun_fact", "")
-        action_prompt = parsed_synth.get("action_prompt", "")
-        vocabulary = normalize_vocabulary(
-            parsed_synth.get("vocabulary"),
-            [kid_summary, fun_fact]
-        )
-        is_safe, violations = inspect_safety_completion(
-            [kid_summary, fun_fact, action_prompt, *[item["meaning"] for item in vocabulary]]
-        )
+        child_facts = _extract_child_facts(object_name, grounding_info["extract"])
+        generated = _generate_child_explanation(object_name, child_facts, language)
+        if generated.get("too_complex"):
+            return {
+                "success": True, "identified": False, "is_safe": True,
+                "safety_flag_reason": None, "object_name": None, "kid_summary": None,
+                "fun_fact": None, "action_prompt": None, "readability": generated.get("readability"),
+                "grounding": None,
+                "confidence_note": "This topic is a little tricky right now. Try a different item and explore again.",
+                "error": None, "language": language,
+            }
+        kid_summary = generated.get("kid_summary", "")
+        fun_fact = generated.get("fun_fact", "")
+        action_prompt = generated.get("action_prompt", "")
+        vocabulary = generated.get("vocabulary", [])
+        is_safe = not generated.get("blocked", False)
+        violations = generated.get("violations", [])
 
         if not is_safe:
             return {
@@ -526,7 +593,7 @@ def explain_object_name(object_name: str, language: str = "english") -> dict:
                 "language": language,
             }
 
-        readability = evaluate_readability(f"{kid_summary} {fun_fact}")
+        readability = generated.get("readability") or evaluate_readability(f"{kid_summary} {fun_fact}")
 
         return {
             "success": True,
@@ -697,39 +764,25 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg", lang
 
         ref_text = grounding_info["extract"]
 
-        # Step D: Synthesize grounded explanation with fast text model
-        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
-            object_name=object_name,
-            reference_text=ref_text
-        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
-
-        synthesis_completion = client.chat.completions.create(
-            model=VISION_MODEL,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"},
-            max_tokens=300,
-            temperature=0.2
-        )
-        parsed_synth = json.loads(synthesis_completion.choices[0].message.content.strip())
-
-        kid_summary = parsed_synth.get("kid_summary", "")
-        fun_fact = parsed_synth.get("fun_fact", "")
-        action_prompt = parsed_synth.get("action_prompt", "")
-        vocabulary = normalize_vocabulary(
-            parsed_synth.get("vocabulary"),
-            [kid_summary, fun_fact]
-        )
-
-        # Step E: Post-generation content filter check
-        texts_to_check = [
-            kid_summary,
-            fun_fact,
-            action_prompt,
-            *[item["meaning"] for item in vocabulary],
-        ]
-        is_safe, violations = inspect_safety_completion(texts_to_check)
+        # Step D: Extract source-bound facts, then generate and validate the explanation.
+        child_facts = _extract_child_facts(object_name, ref_text)
+        generated = _generate_child_explanation(object_name, child_facts, language)
+        if generated.get("too_complex"):
+            return {
+                "success": True, "identified": False, "is_safe": True,
+                "safety_flag_reason": None, "object_name": None, "kid_summary": None,
+                "fun_fact": None, "action_prompt": None, "readability": generated.get("readability"),
+                "grounding": None,
+                "confidence_note": "This topic is a little tricky right now. Try a different item and explore again.",
+                "possible_objects": possible_objects, "needs_clearer_image": False,
+                "error": None, "language": language,
+            }
+        kid_summary = generated.get("kid_summary", "")
+        fun_fact = generated.get("fun_fact", "")
+        action_prompt = generated.get("action_prompt", "")
+        vocabulary = generated.get("vocabulary", [])
+        is_safe = not generated.get("blocked", False)
+        violations = generated.get("violations", [])
 
         if not is_safe:
             return {
