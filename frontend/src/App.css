@@ -87,6 +87,23 @@ button:not(:disabled):hover {
   padding: 0.55rem 0.85rem;
 }
 
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.help-link {
+  background: #fff;
+  border: 1px solid #cbddec;
+  border-radius: 999px;
+  color: #28577c;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.55rem 0.85rem;
+}
+
 .hero {
   background: linear-gradient(120deg, #17324d 0%, #28577c 70%, #387b8f 100%);
   border-radius: 30px;
@@ -229,6 +246,8 @@ button:not(:disabled):hover {
   .brand-mark { font-size: 1.8rem; }
   .brand h1 { font-size: 1.25rem; }
   .parent-link { font-size: 0.75rem; }
+  .help-link { font-size: 0.72rem; padding: 0.5rem 0.65rem; }
+  .header-actions { gap: 0.35rem; }
   .toolbar { align-items: flex-start; flex-direction: column; }
   .toolbar label { display: flex; flex-direction: column; gap: 0.3rem; }
   .hero { border-radius: 22px; }

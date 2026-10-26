@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import PhotoCapture from './components/Capture/PhotoCapture';
 import ParentDashboard from './components/Parent/ParentDashboard';
@@ -7,10 +7,17 @@ import Quiz from './components/Quiz/Quiz';
 import Story from './components/Story/Story';
 import VocabularyText from './components/Vocabulary/VocabularyText';
 import DiscoveryMap from './components/DiscoveryMap/DiscoveryMap';
+import WelcomeGuide from './components/WelcomeGuide/WelcomeGuide';
+
+const WELCOME_GUIDE_KEY = 'kinderlens_welcome_guide_seen';
 
 export default function App() {
   const [result, setResult] = useState(null);
   const [showParentDashboard, setShowParentDashboard] = useState(false);
+  const [welcomeGuideOpen, setWelcomeGuideOpen] = useState(
+    () => localStorage.getItem(WELCOME_GUIDE_KEY) !== 'true'
+  );
+  const [welcomeGuideStep, setWelcomeGuideStep] = useState(0);
   const [language, setLanguage] = useState('english');
   const [profiles, setProfiles] = useState([]);
   const [childProfileId, setChildProfileId] = useState(
@@ -120,6 +127,19 @@ export default function App() {
     setShowParentDashboard(false);
   };
 
+  const dismissWelcomeGuide = useCallback(() => {
+    localStorage.setItem(WELCOME_GUIDE_KEY, 'true');
+    setWelcomeGuideOpen(false);
+  }, []);
+
+  const advanceWelcomeGuide = useCallback(() => {
+    if (welcomeGuideStep >= 2) {
+      dismissWelcomeGuide();
+      return;
+    }
+    setWelcomeGuideStep((step) => step + 1);
+  }, [welcomeGuideStep, dismissWelcomeGuide]);
+
   if (showParentDashboard) {
     return (
       <main className="app-shell">
@@ -140,9 +160,18 @@ export default function App() {
             <p>Small questions. Big discoveries.</p>
           </div>
         </button>
-        <button type="button" className="parent-link" aria-label="Parent area" onClick={() => setShowParentDashboard(true)}>
-          Parent area
-        </button>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="help-link"
+            onClick={() => { setWelcomeGuideStep(0); setWelcomeGuideOpen(true); }}
+          >
+            How to play
+          </button>
+          <button type="button" className="parent-link" aria-label="Parent area" onClick={() => setShowParentDashboard(true)}>
+            Parent area
+          </button>
+        </div>
       </header>
 
       <div className="app-content">
@@ -221,6 +250,14 @@ export default function App() {
           />
         )}
       </div>
+      {welcomeGuideOpen && (
+        <WelcomeGuide
+          step={welcomeGuideStep}
+          onNext={advanceWelcomeGuide}
+          onBack={() => setWelcomeGuideStep((step) => Math.max(0, step - 1))}
+          onDismiss={dismissWelcomeGuide}
+        />
+      )}
     </main>
   );
 }

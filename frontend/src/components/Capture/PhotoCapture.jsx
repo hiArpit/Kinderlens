@@ -12,6 +12,7 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
   const cameraRequestId = useRef(0);
 
   const [stream, setStream] = useState(null);
+  const [cameraStarting, setCameraStarting] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -32,7 +33,6 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
   }, [previewUrl]);
 
   useEffect(() => {
-    startCamera();
     return () => {
       cameraRequestId.current += 1;
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -76,6 +76,7 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
     }
 
     try {
+      setCameraStarting(true);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'environment' },
@@ -120,6 +121,8 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
       setErrorMessage(
         cameraMessages[error.name] || "Camera couldn't open. You can still choose a photo!"
       );
+    } finally {
+      if (requestId === cameraRequestId.current) setCameraStarting(false);
     }
   };
 
@@ -241,7 +244,13 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
       />
 
       <div className="viewfinder-box">
-        {!capturedImage ? (
+        {capturedImage ? (
+          <img
+            src={previewUrl}
+            alt="Captured item"
+            className="image-preview"
+          />
+        ) : stream ? (
           <video
             ref={videoRef}
             autoPlay
@@ -250,11 +259,11 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
             className="video-preview"
           />
         ) : (
-          <img
-            src={previewUrl}
-            alt="Captured item"
-            className="image-preview"
-          />
+          <div className="camera-placeholder">
+            <span aria-hidden="true">📸</span>
+            <strong>Ready when you are!</strong>
+            <small>Turn on your camera or choose a picture.</small>
+          </div>
         )}
       </div>
 
@@ -270,13 +279,15 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
             <button
               type="button"
               className="action-btn snap-btn"
-              onClick={takePhoto}
-                disabled={!cameraReady}
-                title={cameraReady ? 'Take a picture' : 'The camera is not ready yet'}
-              aria-label="Take picture"
+              onClick={stream ? takePhoto : startCamera}
+              disabled={cameraStarting || Boolean(stream && !cameraReady)}
+              title={stream ? (cameraReady ? 'Take a picture' : 'The camera is starting') : 'Turn on the camera'}
+              aria-label={stream ? 'Take picture' : 'Turn on camera'}
             >
               <span className="btn-icon">📸</span>
-              <span className="btn-label">Snap!</span>
+              <span className="btn-label">
+                {cameraStarting ? 'Opening...' : stream ? 'Snap!' : errorMessage ? 'Try camera again' : 'Turn on camera'}
+              </span>
             </button>
             <button
               type="button"

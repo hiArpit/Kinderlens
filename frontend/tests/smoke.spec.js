@@ -8,6 +8,12 @@ const wonderItems = {
   ],
 };
 
+async function visitHome(page) {
+  await page.goto('/');
+  const skipTour = page.getByRole('button', { name: 'Skip tour' });
+  if (await skipTour.isVisible().catch(() => false)) await skipTour.click();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/account/profiles', async (route) => {
     await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'PARENT_AUTH_REQUIRED' }) });
@@ -17,8 +23,48 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('child view shows safe discovery controls without account fields', async ({ page }) => {
+test('first-visit guide can be skipped, replayed, and stays dismissed on later visits', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ready to explore?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('heading', { name: 'Choose how to begin' })).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('heading', { name: 'Follow a new idea' })).toBeVisible();
+  await page.getByRole('button', { name: 'Let’s explore!' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'How to play' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Skip tour' }).click();
+  await page.reload();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('camera permission is requested only after the child chooses to turn on the camera', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__cameraRequestCount = 0;
+    if (!navigator.mediaDevices) return;
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+      configurable: true,
+      value: async () => {
+        window.__cameraRequestCount += 1;
+        const error = new Error('Camera permission denied for test');
+        error.name = 'NotAllowedError';
+        throw error;
+      },
+    });
+  });
+  await visitHome(page);
+
+  expect(await page.evaluate(() => window.__cameraRequestCount)).toBe(0);
+  await page.getByRole('button', { name: 'Turn on camera' }).click();
+  await expect(page.getByText('Camera permission was denied. Allow camera access in browser settings, then try again.')).toBeVisible();
+  expect(await page.evaluate(() => window.__cameraRequestCount)).toBe(1);
+});
+
+test('child view shows safe discovery controls without account fields', async ({ page }) => {
+  await visitHome(page);
 
   await expect(page.getByRole('heading', { name: 'KinderLens' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Wonder List' })).toBeVisible();
@@ -29,7 +75,7 @@ test('child view shows safe discovery controls without account fields', async ({
 });
 
 test('parent area exposes account setup only after entering the parent area', async ({ page }) => {
-  await page.goto('/');
+  await visitHome(page);
   await page.getByRole('button', { name: 'Parent area' }).click();
 
   await expect(page.getByRole('heading', { name: 'Parent Area' })).toBeVisible();
@@ -63,7 +109,7 @@ test('parent account setup creates a session and shows child profile controls', 
     });
   });
 
-  await page.goto('/');
+  await visitHome(page);
   await page.getByRole('button', { name: 'Parent area' }).click();
   await page.getByRole('button', { name: 'Create a new parent account' }).click();
   await page.getByLabel('Parent email').fill('parent@example.com');
@@ -93,7 +139,7 @@ test('discovery map progresses through four related Rainbow topics', async ({ pa
     });
   });
 
-  await page.goto('/');
+  await visitHome(page);
   await page.getByRole('button', { name: /Rainbow.*Explore/ }).click();
   await expect(page.getByText('Stage 1 of 4')).toBeVisible();
 
@@ -117,6 +163,7 @@ test('KinderLens logo returns from a discovery result to the home page', async (
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
+        success: true,
         identified: true,
         objectName: 'Rainbow',
         kidSummary: 'A rainbow appears when light meets water drops.',
@@ -125,8 +172,9 @@ test('KinderLens logo returns from a discovery result to the home page', async (
     });
   });
 
-  await page.goto('/');
+  await visitHome(page);
   await page.getByRole('button', { name: /Rainbow.*Explore/ }).click();
+  await expect(page.getByRole('heading', { name: 'Rainbow' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Discovery Map' })).toBeVisible();
   await page.getByRole('button', { name: 'Go to KinderLens home' }).click();
   await expect(page.getByRole('heading', { name: 'Wonder List' })).toBeVisible();
@@ -146,7 +194,7 @@ test('discovery map gives a captured object a four-stage trail', async ({ page }
     });
   });
 
-  await page.goto('/');
+  await visitHome(page);
   await page.locator('input[type="file"]').setInputFiles({
     name: 'chair.jpg',
     mimeType: 'image/jpeg',
