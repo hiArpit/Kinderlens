@@ -83,8 +83,9 @@
   }
 
   .viewfinder-box {
-    min-height: min(58vh, 420px);
-    max-height: 72vh;
+    aspect-ratio: 3 / 4;
+    min-height: 0;
+    max-height: min(72vh, 560px);
   }
 
   .button-group {

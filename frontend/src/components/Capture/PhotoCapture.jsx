@@ -13,7 +13,6 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
 
   const [stream, setStream] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [previewAspectRatio, setPreviewAspectRatio] = useState('3 / 4');
   const [capturedImage, setCapturedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -48,7 +47,6 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
 
     const updateVideoDimensions = () => {
       if (video.videoWidth > 0 && video.videoHeight > 0) {
-        setPreviewAspectRatio(`${video.videoWidth} / ${video.videoHeight}`);
         setCameraReady(true);
       }
     };
@@ -242,7 +240,7 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
         onChange={handleFileChange}
       />
 
-      <div className="viewfinder-box" style={{ aspectRatio: previewAspectRatio }}>
+      <div className="viewfinder-box">
         {!capturedImage ? (
           <video
             ref={videoRef}
@@ -256,10 +254,6 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
             src={previewUrl}
             alt="Captured item"
             className="image-preview"
-            onLoad={(event) => {
-              const { naturalWidth, naturalHeight } = event.currentTarget;
-              if (naturalWidth && naturalHeight) setPreviewAspectRatio(`${naturalWidth} / ${naturalHeight}`);
-            }}
           />
         )}
       </div>
