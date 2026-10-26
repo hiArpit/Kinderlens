@@ -27,6 +27,17 @@ const createParentToken = (parentId = null) => {
   return `${payload}.${sign(payload)}`;
 };
 
+const createChildToken = (parentId, childProfileId) => {
+  const payload = Buffer.from(JSON.stringify({
+    role: 'child',
+    parentId,
+    childProfileId,
+    expiresAt: Date.now() + TOKEN_TTL_MS,
+  })).toString('base64url');
+
+  return `${payload}.${sign(payload)}`;
+};
+
 const getToken = (req) => {
   const authorization = req.get('Authorization')?.replace(/^Bearer\s+/i, '');
   if (authorization) return authorization;
@@ -66,6 +77,13 @@ const requireParentAuth = (req, res, next) => {
     });
   }
 
+  if (parsed.role !== 'parent') {
+    return res.status(401).json({
+      error: 'PARENT_AUTH_REQUIRED',
+      message: 'Parent access is required.',
+    });
+  }
+
   req.parentId = parsed.parentId || null;
   return next();
 };
@@ -73,11 +91,32 @@ const requireParentAuth = (req, res, next) => {
 const optionalParentAuth = (req, res, next) => {
   const token = getToken(req);
   if (!token) return next();
+  if (!getSecret()) return requireParentAuth(req, res, next);
+
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature || !hasMatchingSignature(signature, sign(payload))) {
+    return requireParentAuth(req, res, next);
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (parsed.expiresAt <= Date.now()) return requireParentAuth(req, res, next);
+    if (parsed.role === 'child' && parsed.parentId && Object.hasOwn(parsed, 'childProfileId')) {
+      req.parentId = parsed.parentId;
+      req.childProfileId = parsed.childProfileId;
+      req.childSession = true;
+      return next();
+    }
+  } catch (error) {
+    return requireParentAuth(req, res, next);
+  }
+
   return requireParentAuth(req, res, next);
 };
 
 module.exports = {
   ACCOUNT_COOKIE,
+  createChildToken,
   createParentToken,
   requireParentAuth,
   optionalParentAuth,

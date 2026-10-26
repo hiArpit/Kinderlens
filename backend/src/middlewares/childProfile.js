@@ -3,8 +3,19 @@ const ChildProfile = require('../models/ChildProfile');
 const resolveChildProfile = async (req, res, next) => {
   const requestedId = typeof req.body?.child_profile_id === 'string'
     ? req.body.child_profile_id
-    : null;
+    : typeof req.query?.child_profile_id === 'string'
+      ? req.query.child_profile_id
+      : null;
 
+  if (req.childSession) {
+    if (requestedId && (!req.childProfileId || requestedId !== String(req.childProfileId))) {
+      return res.status(403).json({
+        error: 'CHILD_PROFILE_FORBIDDEN',
+        message: 'This child session cannot access another profile.',
+      });
+    }
+    return next();
+  }
   if (!requestedId) return next();
   if (!req.parentId) {
     return res.status(403).json({

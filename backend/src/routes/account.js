@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const express = require('express');
 const Parent = require('../models/Parent');
 const ChildProfile = require('../models/ChildProfile');
-const { ACCOUNT_COOKIE, createParentToken, requireParentAuth } = require('../middlewares/parentAuth');
+const { ACCOUNT_COOKIE, createChildToken, createParentToken, optionalParentAuth, requireParentAuth } = require('../middlewares/parentAuth');
 
 const router = express.Router();
 const HASH_ITERATIONS = 120000;
@@ -76,6 +76,49 @@ router.post('/logout', (req, res) => {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   res.setHeader('Set-Cookie', `${ACCOUNT_COOKIE}=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/${secure}`);
   return res.status(200).json({ success: true });
+});
+
+router.post('/child-session', requireParentAuth, async (req, res) => {
+  if (!req.parentId) {
+    return res.status(403).json({ error: 'ACCOUNT_REQUIRED', message: 'Sign in with a parent account first.' });
+  }
+  const childProfileId = typeof req.body?.child_profile_id === 'string' ? req.body.child_profile_id : '';
+  try {
+    let profile = null;
+    if (childProfileId) {
+      profile = await ChildProfile.findOne({ _id: childProfileId, parentId: req.parentId }).select('_id').lean();
+      if (!profile) {
+        return res.status(403).json({ error: 'CHILD_PROFILE_FORBIDDEN', message: 'That child profile is not available for this account.' });
+      }
+    }
+    return res.status(200).json({
+      success: true,
+      token: createChildToken(req.parentId, profile?._id.toString() || null),
+      childName: profile?.name || null,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: 'INVALID_CHILD_PROFILE', message: 'The selected child profile is not valid.' });
+  }
+});
+
+router.post('/child-session/refresh', optionalParentAuth, async (req, res) => {
+  if (!req.childSession || !req.parentId) {
+    return res.status(401).json({ error: 'CHILD_SESSION_REQUIRED', message: 'The child learning session has expired.' });
+  }
+  try {
+    if (req.childProfileId) {
+      const profileExists = await ChildProfile.exists({ _id: req.childProfileId, parentId: req.parentId });
+      if (!profileExists) {
+        return res.status(401).json({ error: 'CHILD_SESSION_EXPIRED', message: 'The selected child profile is no longer available.' });
+      }
+    }
+    return res.status(200).json({
+      success: true,
+      token: createChildToken(req.parentId, req.childProfileId || null),
+    });
+  } catch (error) {
+    return res.status(503).json({ error: 'CHILD_SESSION_UNAVAILABLE', message: 'The child learning session could not be renewed.' });
+  }
 });
 
 router.get('/profiles', requireParentAuth, async (req, res) => {

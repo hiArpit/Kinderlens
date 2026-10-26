@@ -1,5 +1,8 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import './PhotoCapture.css';
+import { childSessionHeaders, hasChildSession } from '../../childSession';
+
+const PHOTO_RETRY_MESSAGE = 'I couldn’t explore that picture just now. Please try again in a little bit.';
 
 export default function PhotoCapture({ onUploadSuccess, language = 'english', childProfileId = '' }) {
   const videoRef = useRef(null);
@@ -122,25 +125,48 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
     const filename = capturedImage.name || 'capture.jpg';
     formData.append('photo', capturedImage, filename);
     formData.append('language', language);
-    if (childProfileId) formData.append('child_profile_id', childProfileId);
+    if (childProfileId && !hasChildSession()) formData.append('child_profile_id', childProfileId);
 
     try {
       const res = await fetch('/api/capture/upload', {
         method: 'POST',
         credentials: 'include',
+        headers: childSessionHeaders(),
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data.message || 'Upload failed');
+        console.error('Photo analysis request failed.', {
+          status: res.status,
+          code: data?.error,
+          message: data?.message,
+        });
+        const uploadMessages = {
+          FILE_TOO_LARGE: 'That picture is a little too big. Please choose a smaller one.',
+          UNSUPPORTED_FORMAT: 'Please choose a JPEG, PNG, or WEBP picture.',
+          NO_FILE_PROVIDED: 'Please choose a picture to explore.',
+        };
+        throw new Error(uploadMessages[data?.error] || PHOTO_RETRY_MESSAGE);
+      }
+
+      if (!data) {
+        console.error('Photo analysis API returned an empty or invalid response.', { status: res.status });
+        throw new Error(PHOTO_RETRY_MESSAGE);
       }
 
       if (onUploadSuccess) {
         onUploadSuccess(data);
       }
     } catch (err) {
-      setErrorMessage(err.message || 'Something went wrong. Let’s try again!');
+      console.error('Could not analyze photo.', err);
+      const friendlyUploadMessages = [
+        PHOTO_RETRY_MESSAGE,
+        'That picture is a little too big. Please choose a smaller one.',
+        'Please choose a JPEG, PNG, or WEBP picture.',
+        'Please choose a picture to explore.',
+      ];
+      setErrorMessage(friendlyUploadMessages.includes(err.message) ? err.message : PHOTO_RETRY_MESSAGE);
     } finally {
       setIsUploading(false);
     }

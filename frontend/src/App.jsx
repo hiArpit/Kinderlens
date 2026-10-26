@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import PhotoCapture from './components/Capture/PhotoCapture';
 import ParentDashboard from './components/Parent/ParentDashboard';
@@ -16,10 +16,25 @@ export default function App() {
   const [childProfileId, setChildProfileId] = useState(
     () => localStorage.getItem('kinderlens_child_profile') || ''
   );
+  const [childSessionActive, setChildSessionActive] = useState(
+    () => Boolean(sessionStorage.getItem('kinderlens_child_session'))
+  );
+  const [childSessionName, setChildSessionName] = useState(
+    () => sessionStorage.getItem('kinderlens_child_session_name') || ''
+  );
+  const lastChildActivity = useRef(Date.now());
 
   useEffect(() => {
     fetch('/api/account/profiles', { credentials: 'include' })
-      .then((response) => (response.ok ? response.json() : null))
+      .then((response) => {
+        if (response.ok) return response.json();
+        if ([401, 403].includes(response.status) && !sessionStorage.getItem('kinderlens_child_session')) {
+          setProfiles([]);
+          localStorage.removeItem('kinderlens_child_profile');
+          setChildProfileId('');
+        }
+        return null;
+      })
       .then((data) => {
         if (!data?.profiles) return;
         setProfiles(data.profiles);
@@ -29,6 +44,69 @@ export default function App() {
       })
       .catch(() => {});
   }, [childProfileId, showParentDashboard]);
+
+  useEffect(() => {
+    setChildSessionActive(Boolean(sessionStorage.getItem('kinderlens_child_session')));
+    setChildSessionName(sessionStorage.getItem('kinderlens_child_session_name') || '');
+  }, [showParentDashboard]);
+
+  const endChildSession = () => {
+    sessionStorage.removeItem('kinderlens_child_session');
+    sessionStorage.removeItem('kinderlens_child_session_name');
+    localStorage.removeItem('kinderlens_child_profile');
+    setChildSessionActive(false);
+    setChildSessionName('');
+    setChildProfileId('');
+    setProfiles([]);
+  };
+
+  useEffect(() => {
+    if (!childSessionActive) return undefined;
+    lastChildActivity.current = Date.now();
+    let refreshing = false;
+    const markActive = () => { lastChildActivity.current = Date.now(); };
+    const markVisible = () => {
+      if (document.visibilityState === 'visible') markActive();
+    };
+    const activityEvents = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'click'];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, markActive, { passive: true }));
+    document.addEventListener('visibilitychange', markVisible);
+
+    const refreshTimer = window.setInterval(async () => {
+      const recentlyActive = Date.now() - lastChildActivity.current < 2 * 60 * 1000;
+      const token = sessionStorage.getItem('kinderlens_child_session');
+      if (!recentlyActive || !token || refreshing) return;
+      refreshing = true;
+      try {
+        const response = await fetch('/api/account/child-session/refresh', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (response.ok && data.token) sessionStorage.setItem('kinderlens_child_session', data.token);
+        else if (response.status === 401) {
+          sessionStorage.removeItem('kinderlens_child_session');
+          sessionStorage.removeItem('kinderlens_child_session_name');
+          setChildSessionActive(false);
+          setChildSessionName('');
+          localStorage.removeItem('kinderlens_child_profile');
+          setChildProfileId('');
+          setProfiles([]);
+        }
+      } catch {
+        // Keep the current token; the next active heartbeat can retry.
+      } finally {
+        refreshing = false;
+      }
+    }, 60 * 1000);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, markActive));
+      document.removeEventListener('visibilitychange', markVisible);
+    };
+  }, [childSessionActive]);
 
   const handleProfileChange = (event) => {
     const nextId = event.target.value;
@@ -46,7 +124,7 @@ export default function App() {
     return (
       <main className="app-shell">
         <div className="app-content">
-          <ParentDashboard onClose={() => setShowParentDashboard(false)} />
+          <ParentDashboard childProfileId={childProfileId} onClose={() => setShowParentDashboard(false)} />
         </div>
       </main>
     );
@@ -84,10 +162,19 @@ export default function App() {
                   <option value="hinglish">Hinglish</option>
                 </select>
               </label>
-              {profiles.length > 0 ? (
+              {childSessionActive ? (
+                <>
+                  <span className="profile-note">
+                    Learning for {childSessionName || 'your saved discoveries'}
+                  </span>
+                  <button type="button" className="end-child-session" onClick={endChildSession}>
+                    End learning session
+                  </button>
+                </>
+              ) : profiles.length > 0 ? (
                 <label htmlFor="child-profile-select">
                   Learning for
-                  <select id="child-profile-select" value={childProfileId} onChange={handleProfileChange}>
+                  <select id="child-profile-select" value={childProfileId} onChange={handleProfileChange} disabled={childSessionActive}>
                     {profiles.map((profile) => (
                       <option key={profile._id} value={profile._id}>{profile.name}</option>
                     ))}

@@ -3,12 +3,14 @@ import './ParentDashboard.css';
 
 const TOKEN_KEY = 'kinderlens_parent_token';
 const ACCOUNT_MODE_KEY = 'kinderlens_account_mode';
+const CHILD_SESSION_KEY = 'kinderlens_child_session';
+const CHILD_SESSION_NAME_KEY = 'kinderlens_child_session_name';
 
 function formatDate(value) {
   return new Date(value).toLocaleString();
 }
 
-function ParentDashboard({ onClose }) {
+function ParentDashboard({ onClose, childProfileId = '' }) {
   const [token, setToken] = useState(
     () => localStorage.getItem(TOKEN_KEY)
       || (localStorage.getItem(ACCOUNT_MODE_KEY) === 'true' ? 'account-session' : null)
@@ -108,6 +110,8 @@ function ParentDashboard({ onClose }) {
         throw new Error(data.message || 'Could not unlock parent access.');
       }
       localStorage.setItem(TOKEN_KEY, data.token);
+      sessionStorage.removeItem(CHILD_SESSION_KEY);
+      sessionStorage.removeItem(CHILD_SESSION_NAME_KEY);
       setToken(data.token);
       setPin('');
     } catch (unlockError) {
@@ -132,6 +136,8 @@ function ParentDashboard({ onClose }) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Could not sign in.');
+      sessionStorage.removeItem(CHILD_SESSION_KEY);
+      sessionStorage.removeItem(CHILD_SESSION_NAME_KEY);
       localStorage.removeItem(TOKEN_KEY);
       localStorage.setItem(ACCOUNT_MODE_KEY, 'true');
       setAccountMode(true);
@@ -145,15 +151,37 @@ function ParentDashboard({ onClose }) {
     }
   };
 
-  const lock = () => {
+  const lock = async () => {
     if (accountMode) {
-      fetch('/api/account/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+      try {
+        const response = await fetch('/api/account/child-session', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ child_profile_id: childProfileId || undefined }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Could not prepare child learning access.');
+        sessionStorage.setItem(CHILD_SESSION_KEY, data.token);
+        if (data.childName) sessionStorage.setItem(CHILD_SESSION_NAME_KEY, data.childName);
+        else sessionStorage.removeItem(CHILD_SESSION_NAME_KEY);
+      } catch (lockError) {
+        setError(lockError.message);
+        return;
+      }
+    } else {
+      sessionStorage.removeItem(CHILD_SESSION_KEY);
+      sessionStorage.removeItem(CHILD_SESSION_NAME_KEY);
+    }
+    if (accountMode) {
+      await fetch('/api/account/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     }
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ACCOUNT_MODE_KEY);
     setToken(null);
     setAccountMode(false);
     setHistory([]);
+    onClose();
   };
 
   const createProfile = async (event) => {

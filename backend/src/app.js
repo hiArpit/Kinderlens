@@ -29,6 +29,8 @@ app.use(express.json({ limit: '100kb' }));
 const { rateLimit } = require('./middlewares/rateLimit');
 const captureRoutes = require('./routes/capture');
 app.use('/api/capture', rateLimit({ name: 'capture', windowMs: 60 * 1000, max: 30 }), captureRoutes);
+const discoveryRoutes = require('./routes/discovery');
+app.use('/api/discovery', discoveryRoutes);
 const historyRoutes = require('./routes/history');
 app.use('/api/history', historyRoutes);
 const parentRoutes = require('./routes/parent');

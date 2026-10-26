@@ -2,10 +2,13 @@ import os
 import json
 import base64
 import logging
+import re
 import textstat
 from groq import Groq
 from dotenv import load_dotenv
 from app.services.grounding import fetch_grounding_text
+from app.core.prompt_templates import FACT_EXTRACTION_PROMPT
+from app.core.age_examples import select_explanation_examples
 from app.services.content_filter import inspect_safety_completion
 
 load_dotenv()
@@ -16,7 +19,9 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # Use a current production vision model. The former Llama 3.2 preview model
 # is no longer available through Groq.
 VISION_MODEL = "qwen/qwen3.8-27b"
-MAX_CHILD_GRADE_LEVEL = 4.0
+TARGET_CHILD_GRADE_LEVEL = 2.0
+MAX_CHILD_GRADE_LEVEL = 6.0
+MAX_EXPLANATION_ATTEMPTS = 3
 
 OBJECT_DETECTION_PROMPT = """Analyze this image. Perform two steps:
 1. SAFETY CHECK:
@@ -46,16 +51,18 @@ Return ONLY a JSON object:
 
 CHILD_GROUNDED_SYNTHESIS_PROMPT = """You are the educational text calibrator for KinderLens, an app for children ages 6 to 8.
 
-You must explain the object "{object_name}" using ONLY the facts present in the verified reference text below. Do NOT introduce external trivia, invented facts, or speculation.
+You must explain the object "{object_name}" using ONLY the facts present in the short verified fact list below. Do NOT introduce external trivia, invented facts, or speculation.
 
-VERIFIED REFERENCE TEXT:
+VERIFIED FACTS:
 {reference_text}
+
+STYLE EXAMPLES (if present, copy only the short, clear style; never reuse facts or words):
+{style_examples}
 
 RULES:
 1. AGE CALIBRATION (Ages 6-8):
-   - Give 3 clear sentences for the summary, not just a label.
-   - Use common elementary words and short sentences.
-   - You may use 10 to 16 words when needed to explain an idea clearly.
+   - Give exactly 3 clear, short sentences for the summary, not just a label.
+   - Aim for Grade 1-2. Use common elementary words and short sentences, usually 5-9 words each.
    - If a science or history word is needed, explain it immediately in simple words.
      Example: "A fossil is an old mark or piece of a living thing found in rock."
    - Never use a difficult word by itself when a simpler word will work.
@@ -65,6 +72,7 @@ RULES:
 2. STRICT SAFETY:
    - Zero persona or roleplay: Never say "I", "me", "my", or "friend".
    - No open conversation or personal questions.
+   - If the requested language is Hindi, use Devanagari for every child-facing word. Do not put English letters inside Hindi words.
 3. OUTPUT FORMAT:
    Return a JSON object:
    {{
@@ -163,6 +171,85 @@ def normalize_language(language):
     return language if language in SUPPORTED_LANGUAGES else "english"
 
 
+def extract_child_facts(object_name: str, source_text: str, language: str) -> list[str]:
+    """Distill the dense source before asking the model to write for a child."""
+    response = client.chat.completions.create(
+        model=VISION_MODEL,
+        messages=[{"role": "user", "content": FACT_EXTRACTION_PROMPT.format(
+            object_name=object_name,
+            reference_text=source_text,
+            language=language_instruction(language),
+        )}],
+        response_format={"type": "json_object"},
+        max_tokens=350,
+        temperature=0.1,
+    )
+    parsed = json.loads(response.choices[0].message.content.strip())
+    facts = parsed.get("facts")
+    if not isinstance(facts, list):
+        raise ValueError("Fact extraction response must contain a facts list.")
+    facts = [fact.strip() for fact in facts if isinstance(fact, str) and fact.strip()]
+    if not 3 <= len(facts) <= 5:
+        raise ValueError("Fact extraction must return three to five facts.")
+    return facts
+
+
+def generate_child_explanation(object_name: str, source_text: str, language: str):
+    try:
+        facts = extract_child_facts(object_name, source_text, language)
+    except ValueError as error:
+        logger.warning("Could not distill grounded facts for %r: %s", object_name, error)
+        return None, None
+    fact_text = "\n".join(f"- {fact}" for fact in facts)
+    parsed = None
+    readability = None
+    for attempt in range(1, MAX_EXPLANATION_ATTEMPTS + 1):
+        retry_note = ""
+        if attempt > 1:
+            retry_note = (
+                f"\nYour last draft was above Grade {TARGET_CHILD_GRADE_LEVEL} or used mixed scripts. "
+                "Rewrite with much shorter sentences, simpler words, and simpler sentence structure."
+            )
+        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
+            object_name=object_name,
+            reference_text=fact_text,
+            style_examples=select_explanation_examples(object_name) if language != "hindi" else "",
+        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}{retry_note}"
+        response = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            max_tokens=300,
+            temperature=0.2,
+        )
+        candidate = json.loads(response.choices[0].message.content.strip())
+        summary = candidate.get("kid_summary", "")
+        fact = candidate.get("fun_fact", "")
+        action_prompt = candidate.get("action_prompt", "")
+        complete = all(isinstance(value, str) and value.strip() for value in (summary, fact, action_prompt))
+        draft_text = f"{summary} {fact}".strip()
+        readability = evaluate_readability(draft_text)
+        vocabulary_text = " ".join(
+            f"{item.get('term', '')} {item.get('meaning', '')}"
+            for item in candidate.get("vocabulary", []) if isinstance(item, dict)
+        ) if isinstance(candidate.get("vocabulary"), list) else ""
+        all_child_text = " ".join([draft_text, str(candidate.get("action_prompt", "")), vocabulary_text])
+        mixed_hindi_script = language == "hindi" and bool(re.search(r"[A-Za-z]", all_child_text))
+        logger.warning(
+            "Explanation reading grade object=%r language=%s attempt=%d grade=%s target=%s mixed_hindi_script=%s",
+            object_name, language, attempt, readability["grade_level"], TARGET_CHILD_GRADE_LEVEL, mixed_hindi_script,
+        )
+        parsed = candidate
+        grade_is_over_target = language != "hindi" and readability["grade_level"] > TARGET_CHILD_GRADE_LEVEL
+        if complete and not grade_is_over_target and not mixed_hindi_script:
+            break
+
+    above_hard_ceiling = language != "hindi" and readability["grade_level"] > MAX_CHILD_GRADE_LEVEL
+    if not complete or above_hard_ceiling or (language == "hindi" and mixed_hindi_script):
+        return None, readability
+    return parsed, readability
+
+
 def normalize_vocabulary(value, source_texts):
     if not isinstance(value, list):
         return []
@@ -197,11 +284,13 @@ def generate_story(object_name: str, language: str = "english") -> dict:
                 "error": None,
             }
 
+        child_facts = extract_child_facts(object_name, grounding_info["extract"], language)
+
         completion_result = client.chat.completions.create(
             model=VISION_MODEL,
             messages=[{"role": "user", "content": STORY_PROMPT.format(
                 object_name=object_name,
-                reference_text=grounding_info["extract"],
+                reference_text="\n".join(child_facts),
             ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"}],
             response_format={"type": "json_object"},
             max_tokens=500,
@@ -276,9 +365,11 @@ def generate_quiz(object_name: str, question_count: int = 3, language: str = "en
                 "language": language,
             }
 
+        child_facts = extract_child_facts(object_name, grounding_info["extract"], language)
+
         prompt = QUIZ_PROMPT.format(
             object_name=object_name,
-            reference_text=grounding_info["extract"],
+            reference_text="\n".join(child_facts),
             question_count=question_count,
         ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
         completion_result = client.chat.completions.create(
@@ -395,7 +486,8 @@ def generate_review_quiz(
                     "confidence_note": "A trusted review quiz is not available yet.", "error": None,
                     "language": language,
                 }
-            references.append(f"ABOUT {name}:\n{grounding_info['extract']}")
+            child_facts = extract_child_facts(name, grounding_info["extract"], language)
+            references.append(f"ABOUT {name}:\n" + "\n".join(child_facts))
             grounding_sources.append({
                 "grounded": True,
                 "source_title": grounding_info.get("source_title"),
@@ -486,18 +578,18 @@ def explain_object_name(object_name: str, language: str = "english") -> dict:
                 "error": None,
             }
 
-        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
-            object_name=object_name,
-            reference_text=grounding_info["extract"]
-        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
-        synthesis_completion = client.chat.completions.create(
-            model=VISION_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            max_tokens=300,
-            temperature=0.2
+        parsed_synth, readability = generate_child_explanation(
+            object_name, grounding_info["extract"], language
         )
-        parsed_synth = json.loads(synthesis_completion.choices[0].message.content.strip())
+        if parsed_synth is None:
+            return {
+                "success": True, "identified": False, "is_safe": True,
+                "safety_flag_reason": None, "object_name": None, "kid_summary": None,
+                "fun_fact": None, "action_prompt": None, "readability": readability,
+                "grounding": {"grounded": False, "source_title": None, "source_url": None},
+                "confidence_note": "This topic is too hard to explain simply right now. Try another discovery.",
+                "error": None, "language": language,
+            }
         kid_summary = parsed_synth.get("kid_summary", "")
         fun_fact = parsed_synth.get("fun_fact", "")
         action_prompt = parsed_synth.get("action_prompt", "")
@@ -525,8 +617,6 @@ def explain_object_name(object_name: str, language: str = "english") -> dict:
                 "error": None,
                 "language": language,
             }
-
-        readability = evaluate_readability(f"{kid_summary} {fun_fact}")
 
         return {
             "success": True,
@@ -698,21 +788,17 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg", lang
         ref_text = grounding_info["extract"]
 
         # Step D: Synthesize grounded explanation with fast text model
-        prompt = CHILD_GROUNDED_SYNTHESIS_PROMPT.format(
-            object_name=object_name,
-            reference_text=ref_text
-        ) + f"\n\nLANGUAGE:\n{language_instruction(language)}"
-
-        synthesis_completion = client.chat.completions.create(
-            model=VISION_MODEL,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            response_format={"type": "json_object"},
-            max_tokens=300,
-            temperature=0.2
-        )
-        parsed_synth = json.loads(synthesis_completion.choices[0].message.content.strip())
+        parsed_synth, readability_metrics = generate_child_explanation(object_name, ref_text, language)
+        if parsed_synth is None:
+            return {
+                "success": True, "identified": False, "is_safe": True,
+                "safety_flag_reason": None, "object_name": None, "kid_summary": None,
+                "fun_fact": None, "action_prompt": None, "readability": readability_metrics,
+                "grounding": {"grounded": False, "source_title": None, "source_url": None},
+                "confidence_note": "This topic is too hard to explain simply right now. Try another discovery.",
+                "possible_objects": possible_objects, "needs_clearer_image": False,
+                "error": None, "language": language,
+            }
 
         kid_summary = parsed_synth.get("kid_summary", "")
         fun_fact = parsed_synth.get("fun_fact", "")
@@ -749,9 +835,6 @@ def analyze_image_buffer(image_bytes: bytes, mime_type: str = "image/jpeg", lang
             }
 
         # Step F: Readability assessment
-        combined_text = f"{kid_summary} {fun_fact}"
-        readability_metrics = evaluate_readability(combined_text)
-
         return {
             "success": True,
             "identified": True,

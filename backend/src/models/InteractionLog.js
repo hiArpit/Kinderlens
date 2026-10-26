@@ -105,6 +105,15 @@ const interactionLogSchema = new mongoose.Schema(
         type: Number,
         default: null,
       },
+      reviewObjects: {
+        type: [String],
+        default: [],
+      },
+    },
+    review: {
+      intervalDays: { type: Number, default: 1 },
+      dueAt: { type: Date, default: null, index: true },
+      lastReviewedAt: { type: Date, default: null },
     },
     story: {
       title: {

@@ -35,6 +35,7 @@ const saveInteraction = async (data, language = 'english', parentId = null, chil
     confidenceNote: data.confidence_note,
     possibleObjects: data.possible_objects || [],
     needsClearerImage: data.needs_clearer_image || false,
+    ...(data.identified ? { review: { intervalDays: 1, dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } } : {}),
   });
 };
 

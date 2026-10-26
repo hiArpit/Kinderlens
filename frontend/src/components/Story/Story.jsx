@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import './Story.css';
 import VocabularyText from '../Vocabulary/VocabularyText';
+import { childSessionHeaders, hasChildSession } from '../../childSession';
+
+const STORY_RETRY_MESSAGE = 'I couldn’t make your story just now. Please try again in a little bit.';
 
 async function readJsonResponse(response) {
   const body = await response.text();
   if (!body.trim()) {
-    throw new Error('The story service returned no response. Please restart the backend and try again.');
+    console.error('Story API returned an empty response.', { status: response.status });
+    throw new Error(STORY_RETRY_MESSAGE);
   }
 
   try {
     return JSON.parse(body);
-  } catch {
-    throw new Error('The story service is still starting. Please restart the backend and try again.');
+  } catch (error) {
+    console.error('Story API returned invalid JSON.', { status: response.status, error });
+    throw new Error(STORY_RETRY_MESSAGE);
   }
 }
 
@@ -27,19 +32,26 @@ export default function Story({ objectName, language = 'english', childProfileId
       const response = await fetch('/api/story', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: childSessionHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           object_name: objectName,
           language,
-          child_profile_id: childProfileId || undefined,
+          ...(!hasChildSession() && childProfileId ? { child_profile_id: childProfileId } : {}),
         }),
       });
       const data = await readJsonResponse(response);
-      if (!response.ok) throw new Error(data.message || 'Could not make a story.');
-      if (!data.available) throw new Error(data.message || 'A story is not available yet.');
+      if (!response.ok) {
+        console.error('Story request failed.', { status: response.status, message: data.message });
+        throw new Error(STORY_RETRY_MESSAGE);
+      }
+      if (!data.available) {
+        console.warn('Story is unavailable.', { message: data.message });
+        throw new Error(STORY_RETRY_MESSAGE);
+      }
       setStory(data);
     } catch (storyError) {
-      setError(storyError.message);
+      console.error('Could not generate story.', storyError);
+      setError(STORY_RETRY_MESSAGE);
     } finally {
       setIsLoading(false);
     }

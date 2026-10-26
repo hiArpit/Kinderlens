@@ -39,6 +39,22 @@ test('quiz validates object and question count before calling AI', async () => {
   assert.equal(invalidCount.body.error, 'INVALID_QUESTION_COUNT');
 });
 
+test('logged-out discovery and review endpoints never expose anonymous history', async () => {
+  const graph = await request(app).get('/api/discovery');
+  const dueReviews = await request(app).get('/api/quiz/due');
+  const reviewQuiz = await request(app).post('/api/quiz/review').send({ question_count: 3 });
+
+  assert.equal(graph.status, 200);
+  assert.equal(graph.body.authenticated, false);
+  assert.deepEqual(graph.body.discoveries, []);
+  assert.deepEqual(graph.body.edges, []);
+  assert.equal(dueReviews.status, 200);
+  assert.equal(dueReviews.body.authenticated, false);
+  assert.deepEqual(dueReviews.body.objectNames, []);
+  assert.equal(reviewQuiz.status, 200);
+  assert.equal(reviewQuiz.body.available, false);
+});
+
 test('story validates object before calling AI', async () => {
   const response = await request(app).post('/api/story').send({ language: 'hinglish' });
 

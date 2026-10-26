@@ -44,7 +44,6 @@ router.post('/:slug/explore', async (req, res) => {
       funFact: data.fun_fact,
       actionPrompt: data.action_prompt,
       vocabulary: data.vocabulary || [],
-      language: data.language || req.body.language || 'english',
       readability: data.readability && {
         gradeLevel: data.readability.grade_level,
         readingEase: data.readability.reading_ease,
@@ -56,6 +55,7 @@ router.post('/:slug/explore', async (req, res) => {
         sourceUrl: data.grounding.source_url,
       },
       confidenceNote: data.confidence_note,
+      ...(data.identified ? { review: { intervalDays: 1, dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } } : {}),
     });
 
     return res.status(200).json({

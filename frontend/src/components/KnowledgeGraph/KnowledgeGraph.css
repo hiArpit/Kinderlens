@@ -1,0 +1,123 @@
+.knowledge-graph {
+  background: #fff;
+  border: 1px solid #e4defa;
+  border-radius: 14px;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.knowledge-graph-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.knowledge-graph-heading h4 {
+  color: #4c1d95;
+  margin: 0;
+}
+
+.knowledge-graph-heading p {
+  color: #6b21a8;
+  font-size: 0.9rem;
+  margin: 0.2rem 0 0;
+}
+
+.knowledge-graph-heading > span {
+  background: #f5f3ff;
+  border-radius: 999px;
+  color: #5b21b6;
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+}
+
+.knowledge-graph-canvas {
+  display: block;
+  height: auto;
+  margin: 0.4rem auto 0;
+  max-height: 290px;
+  width: 100%;
+}
+
+.knowledge-graph-edge {
+  stroke: #a78bfa;
+  stroke-dasharray: 5 4;
+  stroke-width: 2.5;
+}
+
+.knowledge-graph-node rect {
+  fill: #f5f3ff;
+  stroke: #a78bfa;
+  stroke-width: 2;
+}
+
+.knowledge-graph-node text {
+  fill: #312e81;
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.knowledge-graph-links {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+}
+
+.knowledge-graph-links li {
+  background: #faf9ff;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+}
+
+.knowledge-graph-links strong,
+.knowledge-graph-links small {
+  display: block;
+}
+
+.knowledge-graph-links strong {
+  color: #312e81;
+  font-size: 0.9rem;
+}
+
+.knowledge-graph-links small,
+.knowledge-graph-empty,
+.knowledge-graph-no-edges,
+.knowledge-graph-more p {
+  color: #64748b;
+  font-size: 0.82rem;
+  margin: 0.2rem 0 0;
+}
+
+.knowledge-graph-empty,
+.knowledge-graph-no-edges {
+  margin-top: 0.75rem;
+}
+
+.knowledge-graph-more {
+  border-top: 1px solid #ede9fe;
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+}
+
+.knowledge-graph-more > strong {
+  color: #4c1d95;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 520px) {
+  .knowledge-graph {
+    padding: 0.75rem;
+  }
+
+  .knowledge-graph-canvas {
+    margin-left: -3%;
+    width: 106%;
+  }
+}
