@@ -7,8 +7,9 @@
 
 .viewfinder-box {
   width: 100%;
+  aspect-ratio: 4 / 3;
   min-height: 260px;
-  max-height: 60vh;
+  max-height: 70vh;
   overflow: hidden;
   border-radius: 20px;
   background: #111827;
@@ -21,13 +22,9 @@
 .image-preview {
   display: block;
   width: 100%;
-  max-height: 60vh;
+  height: 100%;
+  max-height: inherit;
   object-fit: contain;
-}
-
-.video-preview {
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
 }
 
 .button-group {
@@ -86,15 +83,8 @@
   }
 
   .viewfinder-box {
-    aspect-ratio: 3 / 2;
-    min-height: 0;
-    max-height: none;
-  }
-
-  .video-preview,
-  .image-preview {
-    height: 100%;
-    max-height: none;
+    min-height: min(58vh, 420px);
+    max-height: 72vh;
   }
 
   .button-group {

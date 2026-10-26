@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './Quiz.css';
 import KnowledgeGraph from '../KnowledgeGraph/KnowledgeGraph';
 import { childSessionHeaders, hasChildSession } from '../../childSession';
@@ -47,6 +47,36 @@ export default function Quiz({ objectName, language = 'english', review = false,
   const [learningGraph, setLearningGraph] = useState(null);
   const [learningGraphLoading, setLearningGraphLoading] = useState(false);
   const [learningGraphError, setLearningGraphError] = useState(false);
+  const graphRequestId = useRef(0);
+
+  const loadLearningGraph = useCallback(async (focusName = '', page = 1) => {
+    const requestId = ++graphRequestId.current;
+    const queryParams = new URLSearchParams();
+    if (childProfileId && !hasChildSession()) queryParams.set('child_profile_id', childProfileId);
+    if (focusName) {
+      queryParams.set('focus', focusName);
+      queryParams.set('page', String(page));
+    }
+    setLearningGraphLoading(true);
+    setLearningGraphError(false);
+    try {
+      const response = await fetch(`/api/discovery?${queryParams.toString()}`, {
+        credentials: 'include',
+        headers: childSessionHeaders(),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        console.error('Learning graph request failed.', { status: response.status, message: data.message });
+        throw new Error('Learning graph request failed.');
+      }
+      if (requestId === graphRequestId.current) setLearningGraph(data);
+    } catch (error) {
+      console.error('Could not load learning graph.', error);
+      if (requestId === graphRequestId.current) setLearningGraphError(true);
+    } finally {
+      if (requestId === graphRequestId.current) setLearningGraphLoading(false);
+    }
+  }, [childProfileId]);
 
   useEffect(() => {
     if (!review) return;
@@ -72,28 +102,12 @@ export default function Quiz({ objectName, language = 'english', review = false,
         if (!ignore) setDueReviews({ available: false, error: true });
       });
     setLearningGraph(null);
-    setLearningGraphLoading(true);
-    setLearningGraphError(false);
-    fetch(`/api/discovery${query}`, { credentials: 'include', headers: childSessionHeaders() })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-          console.error('Learning graph request failed.', { status: response.status, message: data.message });
-          throw new Error('Learning graph request failed.');
-        }
-        return data;
-      })
-      .then((data) => {
-        if (ignore) return;
-        setLearningGraph(data);
-      })
-      .catch((error) => {
-        console.error('Could not load learning graph.', error);
-        if (!ignore) setLearningGraphError(true);
-      })
-      .finally(() => { if (!ignore) setLearningGraphLoading(false); });
-    return () => { ignore = true; };
-  }, [review, childProfileId]);
+    loadLearningGraph();
+    return () => {
+      ignore = true;
+      graphRequestId.current += 1;
+    };
+  }, [review, childProfileId, loadLearningGraph]);
 
   const startQuiz = async () => {
     if (review && !dueReviews?.available) return;
@@ -174,7 +188,7 @@ export default function Quiz({ objectName, language = 'english', review = false,
         </div>
       </div>
 
-      {review && learningGraphLoading && (
+      {review && learningGraphLoading && !learningGraph && (
         <p className="review-due-note">Loading your captured objects…</p>
       )}
       {review && learningGraphError && (
@@ -184,6 +198,13 @@ export default function Quiz({ objectName, language = 'english', review = false,
         <KnowledgeGraph
           discoveries={learningGraph.discoveries || []}
           edges={learningGraph.edges || []}
+          focusedObject={learningGraph.focusedObject}
+          totalConnections={learningGraph.totalConnections || 0}
+          page={learningGraph.page || 1}
+          pageCount={learningGraph.pageCount || 1}
+          loading={learningGraphLoading}
+          hasError={learningGraphError}
+          onFocusChange={loadLearningGraph}
           emptyMessage={learningGraph.message}
         />
       )}

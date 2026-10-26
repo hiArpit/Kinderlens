@@ -6,6 +6,8 @@ process.env.PARENT_SESSION_SECRET = 'test-parent-secret';
 process.env.PARENT_PIN = '2468';
 
 const app = require('../src/app');
+const InteractionLog = require('../src/models/InteractionLog');
+const { buildEdges, buildFocusedEdges } = require('../src/routes/discovery');
 const { createParentToken, requireParentAuth } = require('../src/middlewares/parentAuth');
 const { clearRateLimitBuckets } = require('../src/middlewares/rateLimit');
 
@@ -53,6 +55,80 @@ test('logged-out discovery and review endpoints never expose anonymous history',
   assert.deepEqual(dueReviews.body.objectNames, []);
   assert.equal(reviewQuiz.status, 200);
   assert.equal(reviewQuiz.body.available, false);
+});
+
+test('learning graph links show the grounded facts behind a shared idea', () => {
+  const edges = buildEdges([
+    {
+      objectName: 'Moon',
+      kidSummary: 'The Moon goes around Earth. Sunlight makes it look bright.',
+      funFact: 'People can see the Moon at night.',
+    },
+    {
+      objectName: 'Dinosaur',
+      kidSummary: 'Dinosaurs lived on Earth long ago. Some dinosaurs ate plants.',
+      funFact: 'A few dinosaurs had feathers.',
+    },
+  ]);
+
+  assert.equal(edges.length, 1);
+  assert.equal(edges[0].sharedIdea, 'earth');
+  assert.equal(edges[0].fromFact, 'The Moon goes around Earth.');
+  assert.equal(edges[0].toFact, 'Dinosaurs lived on Earth long ago.');
+  assert.equal(Object.hasOwn(edges[0], 'detail'), false);
+});
+
+test('focused learning graph finds relationships beyond the overview objects', () => {
+  const focus = {
+    objectName: 'Moon',
+    kidSummary: 'The Moon goes around Earth.',
+    funFact: '',
+  };
+  const olderDiscovery = {
+    objectName: 'Dinosaur',
+    kidSummary: 'Dinosaurs lived on Earth long ago.',
+    funFact: '',
+  };
+
+  const edges = buildFocusedEdges(focus, [focus, olderDiscovery]);
+
+  assert.equal(edges.length, 1);
+  assert.equal(edges[0].to, 'Dinosaur');
+  assert.equal(edges[0].sharedIdea, 'earth');
+});
+
+test('focused learning graph paginates large connection sets', async () => {
+  const records = [
+    { objectName: 'Moon', kidSummary: 'The Moon goes around Earth.', funFact: '', createdAt: new Date() },
+    ...Array.from({ length: 10 }, (_, index) => ({
+      objectName: `Object ${index + 1}`,
+      kidSummary: `Object ${index + 1} connects with Earth.`,
+      funFact: '',
+      createdAt: new Date(Date.now() - index - 1),
+    })),
+  ];
+  const originalFind = InteractionLog.find;
+  InteractionLog.find = () => ({
+    sort() { return this; },
+    limit() { return this; },
+    select() { return this; },
+    lean: async () => records,
+  });
+
+  try {
+    const token = createParentToken('parent-1');
+    const response = await request(app)
+      .get('/api/discovery?focus=Moon&page=2')
+      .set('Authorization', `Bearer ${token}`);
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.focusedObject, 'Moon');
+    assert.equal(response.body.totalConnections, 10);
+    assert.equal(response.body.pageCount, 2);
+    assert.equal(response.body.edges.length, 2);
+  } finally {
+    InteractionLog.find = originalFind;
+  }
 });
 
 test('story validates object before calling AI', async () => {

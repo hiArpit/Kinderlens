@@ -8,8 +8,12 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const streamRef = useRef(null);
+  const cameraRequestId = useRef(0);
 
   const [stream, setStream] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [previewAspectRatio, setPreviewAspectRatio] = useState('3 / 4');
   const [capturedImage, setCapturedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -30,11 +34,38 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
 
   useEffect(() => {
     startCamera();
-    return () => stopCamera();
+    return () => {
+      cameraRequestId.current += 1;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    };
   }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!stream || !video || capturedImage) return undefined;
+    video.srcObject = stream;
+
+    const updateVideoDimensions = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        setPreviewAspectRatio(`${video.videoWidth} / ${video.videoHeight}`);
+        setCameraReady(true);
+      }
+    };
+    video.addEventListener('loadedmetadata', updateVideoDimensions);
+    if (video.readyState >= 1) updateVideoDimensions();
+    video.play().catch(() => {});
+
+    return () => {
+      video.removeEventListener('loadedmetadata', updateVideoDimensions);
+      if (video.srcObject === stream) video.srcObject = null;
+    };
+  }, [stream, capturedImage]);
 
   const startCamera = async () => {
     setErrorMessage('');
+    setCameraReady(false);
+    const requestId = ++cameraRequestId.current;
 
     if (!window.isSecureContext) {
       setErrorMessage('Camera access needs HTTPS on your phone. You can still choose a photo.');
@@ -48,14 +79,40 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
 
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+          aspectRatio: { ideal: 9 / 16 },
+        },
         audio: false,
       });
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+      if (requestId !== cameraRequestId.current) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+        return;
       }
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      let focusModes = [];
+      try {
+        focusModes = videoTrack?.getCapabilities?.().focusMode || [];
+      } catch (capabilityError) {
+        console.info('Camera focus controls are not available.', capabilityError);
+      }
+      if (focusModes?.includes('continuous')) {
+        try {
+          await videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+        } catch (focusError) {
+          console.info('Continuous autofocus is not available for this camera.', focusError);
+        }
+      }
+      if (requestId !== cameraRequestId.current) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      setStream(mediaStream);
+      streamRef.current = mediaStream;
     } catch (error) {
+      if (requestId !== cameraRequestId.current) return;
       const cameraMessages = {
         NotAllowedError: 'Camera permission was denied. Allow camera access in browser settings, then try again.',
         NotFoundError: 'No camera was found on this device. You can still choose a photo.',
@@ -69,14 +126,15 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
   };
 
   const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-    }
+    cameraRequestId.current += 1;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setStream(null);
+    setCameraReady(false);
   };
 
   const takePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !cameraReady) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth || 640;
@@ -184,7 +242,7 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
         onChange={handleFileChange}
       />
 
-      <div className="viewfinder-box">
+      <div className="viewfinder-box" style={{ aspectRatio: previewAspectRatio }}>
         {!capturedImage ? (
           <video
             ref={videoRef}
@@ -198,6 +256,10 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
             src={previewUrl}
             alt="Captured item"
             className="image-preview"
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              if (naturalWidth && naturalHeight) setPreviewAspectRatio(`${naturalWidth} / ${naturalHeight}`);
+            }}
           />
         )}
       </div>
@@ -215,6 +277,8 @@ export default function PhotoCapture({ onUploadSuccess, language = 'english', ch
               type="button"
               className="action-btn snap-btn"
               onClick={takePhoto}
+                disabled={!cameraReady}
+                title={cameraReady ? 'Take a picture' : 'The camera is not ready yet'}
               aria-label="Take picture"
             >
               <span className="btn-icon">📸</span>
