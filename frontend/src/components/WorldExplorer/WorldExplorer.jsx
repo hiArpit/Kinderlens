@@ -365,7 +365,7 @@ export default function WorldExplorer({ language = 'english' }) {
   );
   const laidOutPlaces = useMemo(() => {
     const { width, height } = mapDimensions;
-    const spacing = 56;
+    const spacing = 46;
     const points = places.map((place, index) => ({
       place,
       index,
@@ -563,9 +563,10 @@ export default function WorldExplorer({ language = 'english' }) {
         </div>
       )}
 
+      <div className="world-map-stage">
       <div ref={mapCanvasRef} className="world-map-canvas" onPointerDown={beginMapPan} onPointerMove={moveMapPan} onPointerUp={endMapPan} onPointerCancel={endMapPan}>
         <div className="world-map-scene" style={{ transform: `translate(${mapPan.x}px, ${mapPan.y}px) scale(${mapZoom})` }}>
-        <svg className="world-map-art" viewBox="0 0 1000 500" role="img" aria-labelledby="world-map-label">
+        <svg className="world-map-art" viewBox="0 0 1000 500" preserveAspectRatio="none" role="img" aria-labelledby="world-map-label">
           <title id="world-map-label">{copy.mapAlt}</title>
           <defs>
             <linearGradient id="world-ocean" x1="0" x2="1" y1="0" y2="1">
@@ -632,6 +633,7 @@ export default function WorldExplorer({ language = 'english' }) {
           {(mapZoom > 1 || mapPan.x !== 0 || mapPan.y !== 0) && <button type="button" aria-label={copy.resetZoom} onClick={resetMapView}>↺</button>}
         </div>
         <span className="world-map-pan-hint">{copy.panHint}</span>
+      </div>
         {selectedPlace && selectedText && (
           <article className="world-place-card world-place-panel" aria-live="polite" aria-labelledby="world-place-title">
             <button type="button" className="world-place-close" aria-label={copy.closeDetails} onClick={() => setSelectedId(null)}>×</button>
