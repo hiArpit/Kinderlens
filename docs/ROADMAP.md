@@ -113,6 +113,14 @@ questions. The separate Review experience shows saved objects from the selected
 child profile and connects them when their grounded explanations share terms.
 Review quizzes can be started early; missed reviews are available to catch up.
 
+World Explorer combines curated geological and fossil discoveries with live
+GBIF bird, animal, and plant observations. Bird pins use licensed thumbnails
+when available, and common names come from GBIF's vernacular-name records.
+Sightings use rounded map areas; selected species are enriched with a short
+Wikipedia summary and source links. The map keeps curated entries as a fallback
+if public data services are unavailable. The interface supports English, Hindi,
+and Hinglish.
+
 ## Production API configuration
 
 The backend accepts credentialed browser requests only from `FRONTEND_ORIGIN`

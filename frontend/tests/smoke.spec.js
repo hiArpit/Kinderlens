@@ -63,6 +63,24 @@ test('camera permission is requested only after the child chooses to turn on the
   expect(await page.evaluate(() => window.__cameraRequestCount)).toBe(1);
 });
 
+test('World Explorer pins show sourced discoveries and category filters', async ({ page }) => {
+  await visitHome(page);
+  await expect(page.getByRole('heading', { name: 'World Explorer' })).toBeVisible();
+  await page.getByRole('button', { name: 'Explore Fennec fox in Sahara Desert, North Africa' }).click();
+  await expect(page.getByRole('heading', { name: 'Fennec fox' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Source: Smithsonian’s National Zoo/ })).toBeVisible();
+
+  await page.getByLabel('Learning language').selectOption('hindi');
+  await expect(page.getByRole('heading', { name: 'दुनिया की खोज' })).toBeVisible();
+  await page.getByRole('button', { name: 'सहारा रेगिस्तान, उत्तर अफ्रीका में फेनेक लोमड़ी देखो' }).click();
+  await expect(page.getByText(/फेनेक लोमड़ी सहारा में रहती है/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'जीवाश्म', exact: true }).click();
+  await expect(page.locator('.world-map-marker')).toHaveCount(1);
+  await page.getByRole('button', { name: 'यूटा, संयुक्त राज्य में डायनासोर के जीवाश्म देखो' }).click();
+  await expect(page.getByText(/असली डायनासोर की हड्डियाँ आज भी दिखाई देती हैं/)).toBeVisible();
+});
+
 test('child view shows safe discovery controls without account fields', async ({ page }) => {
   await visitHome(page);
 

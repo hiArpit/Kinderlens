@@ -130,6 +130,22 @@ button:not(:disabled):hover {
 .hero h2 { font-size: clamp(1.45rem, 5vw, 2rem); margin: 0 0 0.35rem; position: relative; z-index: 1; }
 .hero p { color: #d9eff6; margin: 0; max-width: 34rem; position: relative; z-index: 1; }
 
+.hero-world-link {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-block;
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-top: 0.9rem;
+  padding: 0.5rem 0.8rem;
+  position: relative;
+  text-decoration: none;
+  z-index: 1;
+}
+
+.hero-world-link:hover { background: rgba(255, 255, 255, 0.12); }
+
 .toolbar {
   align-items: center;
   background: rgba(255,255,255,0.78);

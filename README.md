@@ -1,9 +1,9 @@
 # KinderLens
 
 KinderLens is a child-focused discovery app for ages 6–8. Children can explore
-camera captures or curated Wonder List topics, then revisit grounded learning
-through quizzes, stories, and a graph of saved discoveries. Parent accounts
-control child profiles and saved history.
+camera captures, curated Wonder List topics, and a World Explorer map combining
+live wildlife records with sourced natural and geological discoveries, then revisit grounded learning through quizzes, stories, and a graph of
+saved discoveries. Parent accounts control child profiles and saved history.
 
 ## Run the full app with Docker Compose
 

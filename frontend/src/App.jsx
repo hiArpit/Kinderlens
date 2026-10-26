@@ -8,6 +8,7 @@ import Story from './components/Story/Story';
 import VocabularyText from './components/Vocabulary/VocabularyText';
 import DiscoveryMap from './components/DiscoveryMap/DiscoveryMap';
 import WelcomeGuide from './components/WelcomeGuide/WelcomeGuide';
+import WorldExplorer from './components/WorldExplorer/WorldExplorer';
 
 const WELCOME_GUIDE_KEY = 'kinderlens_welcome_guide_seen';
 
@@ -180,6 +181,9 @@ export default function App() {
             <section className="hero">
               <h2>What will we discover today?</h2>
               <p>Take a picture or choose a wonder. We&apos;ll turn curiosity into a learning adventure.</p>
+              <a className="hero-world-link" href="#world-explorer">
+                {language === 'hindi' ? 'दुनिया का नक्शा देखो ↓' : language === 'hinglish' ? 'Duniya explore karo ↓' : 'Explore the world ↓'}
+              </a>
             </section>
 
             <div className="toolbar">
@@ -236,6 +240,7 @@ export default function App() {
               </section>
               <DiscoveryMap />
             </div>
+            <WorldExplorer language={language} />
             <div className="learning-section">
               <WonderList onExplore={setResult} language={language} childProfileId={childProfileId} />
               <Quiz review language={language} childProfileId={childProfileId} />
