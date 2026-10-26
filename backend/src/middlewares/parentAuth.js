@@ -77,6 +77,13 @@ const requireParentAuth = (req, res, next) => {
     });
   }
 
+  if (process.env.NODE_ENV === 'production' && !parsed.parentId) {
+    return res.status(401).json({
+      error: 'PARENT_AUTH_REQUIRED',
+      message: 'Parent access is required.',
+    });
+  }
+
   if (parsed.role !== 'parent') {
     return res.status(401).json({
       error: 'PARENT_AUTH_REQUIRED',

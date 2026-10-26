@@ -21,12 +21,10 @@ function ParentDashboard({ onClose, childProfileId = '' }) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [pin, setPin] = useState('');
   const [history, setHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('highlights');
   const [error, setError] = useState('');
   const [accountError, setAccountError] = useState('');
-  const [pinError, setPinError] = useState('');
   const [notice, setNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [profiles, setProfiles] = useState([]);
@@ -92,34 +90,6 @@ function ParentDashboard({ onClose, childProfileId = '' }) {
     () => history.filter((entry) => entry.activityType === 'quiz' || entry.outcome === 'quiz'),
     [history]
   );
-
-  const unlock = async (event) => {
-    event.preventDefault();
-    if (isLoading) return;
-    setError('');
-    setPinError('');
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/parent/unlock', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Could not unlock parent access.');
-      }
-      localStorage.setItem(TOKEN_KEY, data.token);
-      sessionStorage.removeItem(CHILD_SESSION_KEY);
-      sessionStorage.removeItem(CHILD_SESSION_NAME_KEY);
-      setToken(data.token);
-      setPin('');
-    } catch (unlockError) {
-      setPinError(unlockError.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const submitAccount = async (event) => {
     event.preventDefault();
@@ -282,9 +252,9 @@ function ParentDashboard({ onClose, childProfileId = '' }) {
         <div className="parent-heading">
           <span className="parent-icon" aria-hidden="true">🔒</span>
           <h2>Parent Area</h2>
-          <p>Sign in with a parent account or use the local prototype PIN.</p>
+          <p>Sign in with your parent account to manage learning history.</p>
         </div>
-        <form onSubmit={submitAccount} className="pin-form">
+        <form onSubmit={submitAccount} className="account-form">
           <label htmlFor="parent-email">Parent email</label>
           <input id="parent-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
           <label htmlFor="parent-password">Parent password</label>
@@ -296,22 +266,6 @@ function ParentDashboard({ onClose, childProfileId = '' }) {
           <button type="button" className="parent-link-button" onClick={() => setIsRegistering((current) => !current)}>
             {isRegistering ? 'Already have an account? Sign in' : 'Create a new parent account'}
           </button>
-        </form>
-        <div className="parent-divider">or use local prototype PIN</div>
-        <form onSubmit={unlock} className="pin-form">
-          <label htmlFor="parent-pin">Parent PIN</label>
-          <input
-            id="parent-pin"
-            type="password"
-            inputMode="numeric"
-            autoComplete="current-password"
-            value={pin}
-            onChange={(event) => setPin(event.target.value)}
-            required
-            aria-describedby={pinError ? 'parent-pin-error' : undefined}
-          />
-          {pinError && <p id="parent-pin-error" className="parent-error" role="alert">{pinError}</p>}
-          <button type="submit" className="parent-primary-button" disabled={isLoading}>Unlock Dashboard</button>
         </form>
         <button type="button" className="parent-link-button" onClick={onClose}>Back to KinderLens</button>
       </section>

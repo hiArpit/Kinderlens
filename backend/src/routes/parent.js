@@ -6,6 +6,13 @@ const router = express.Router();
 
 router.post('/unlock', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({
+      error: 'PARENT_PIN_DISABLED',
+      message: 'Sign in with a parent account to continue.',
+    });
+  }
+
   const configuredPin = process.env.PARENT_PIN;
   const submittedPin = typeof req.body?.pin === 'string' ? req.body.pin : '';
 

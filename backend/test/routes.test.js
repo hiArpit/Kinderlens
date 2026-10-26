@@ -175,6 +175,26 @@ test('parent history rejects missing and invalid authorization', async () => {
   assert.equal(invalid.body.error, 'PARENT_AUTH_REQUIRED');
 });
 
+test('shared parent PIN is disabled in production, including previously issued prototype tokens', async () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    const unlock = await request(app).post('/api/parent/unlock').send({ pin: '2468' });
+    const legacyToken = createParentToken();
+    const history = await request(app)
+      .get('/api/history')
+      .set('Authorization', `Bearer ${legacyToken}`);
+
+    assert.equal(unlock.status, 403);
+    assert.equal(unlock.body.error, 'PARENT_PIN_DISABLED');
+    assert.equal(history.status, 401);
+    assert.equal(history.body.error, 'PARENT_AUTH_REQUIRED');
+  } finally {
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+  }
+});
+
 test('history privacy endpoints require parent authorization', async () => {
   const exportResponse = await request(app).get('/api/history/export');
   const deleteAllResponse = await request(app).delete('/api/history');

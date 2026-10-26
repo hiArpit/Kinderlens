@@ -22,7 +22,7 @@ Start from `backend/.env.example` and set:
 - `FRONTEND_ORIGIN` to the exact public frontend origin, without a trailing slash
 - `TRUST_PROXY=true` only when the platform terminates TLS and forwards requests
   through a trusted reverse proxy
-- `PARENT_PIN` only while the development fallback remains enabled
+- Do not set `PARENT_PIN` in production. The shared PIN route is disabled there.
 
 The backend refuses to start in production when `MONGODB_URI`,
 `PARENT_SESSION_SECRET`, or `FRONTEND_ORIGIN` is missing.
@@ -74,7 +74,6 @@ Run this checklist on Android Chrome and iPhone Safari:
 - Never commit `.env` files or production credentials.
 - Use a managed MongoDB backup and retention policy.
 - Review logs for private image data before enabling centralized logging.
-- Keep the shared PIN disabled in production after account migration is
-  verified.
+- The shared PIN route is disabled in production; parent accounts are required.
 - Run the backend, frontend, AI, evaluation, and browser test commands before
   promoting a release.

@@ -35,6 +35,7 @@ test('parent area exposes account setup only after entering the parent area', as
   await expect(page.getByRole('heading', { name: 'Parent Area' })).toBeVisible();
   await expect(page.getByLabel('Parent email')).toBeVisible();
   await expect(page.getByLabel('Parent password')).toBeVisible();
+  await expect(page.getByLabel('Parent PIN')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Create a new parent account' })).toBeVisible();
 });
 
@@ -82,6 +83,7 @@ test('discovery map progresses through four related Rainbow topics', async ({ pa
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
+        success: true,
         identified: true,
         objectName: 'Rainbow',
         kidSummary: 'A rainbow appears when light meets water drops.',
