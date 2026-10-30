@@ -64,6 +64,9 @@ test('camera permission is requested only after the child chooses to turn on the
 });
 
 test('World Explorer pins show sourced discoveries and category filters', async ({ page }) => {
+  // Keep this test deterministic: curated pins are the documented fallback
+  // when the live GBIF service is unavailable, and the test asserts those pins.
+  await page.route('https://api.gbif.org/**', (route) => route.abort());
   await visitHome(page);
   await expect(page.getByRole('heading', { name: 'World Explorer' })).toBeVisible();
   await page.getByRole('button', { name: 'Explore Fennec fox in Sahara Desert, North Africa' }).click();
