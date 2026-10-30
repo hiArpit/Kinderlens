@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;
+const ACCOUNT_COOKIE = 'kinderlens_parent_session';
 
 const getSecret = () => process.env.PARENT_SESSION_SECRET;
 
@@ -16,17 +17,38 @@ const hasMatchingSignature = (provided, expected) => {
     && crypto.timingSafeEqual(providedBuffer, expectedBuffer);
 };
 
-const createParentToken = () => {
+const createParentToken = (parentId = null) => {
   const payload = Buffer.from(JSON.stringify({
     role: 'parent',
+    parentId,
     expiresAt: Date.now() + TOKEN_TTL_MS,
   })).toString('base64url');
 
   return `${payload}.${sign(payload)}`;
 };
 
+const createChildToken = (parentId, childProfileId) => {
+  const payload = Buffer.from(JSON.stringify({
+    role: 'child',
+    parentId,
+    childProfileId,
+    expiresAt: Date.now() + TOKEN_TTL_MS,
+  })).toString('base64url');
+
+  return `${payload}.${sign(payload)}`;
+};
+
+const getToken = (req) => {
+  const authorization = req.get('Authorization')?.replace(/^Bearer\s+/i, '');
+  if (authorization) return authorization;
+  const cookies = req.get('Cookie') || '';
+  const cookie = cookies.split(';').map((value) => value.trim())
+    .find((value) => value.startsWith(`${ACCOUNT_COOKIE}=`));
+  return cookie ? decodeURIComponent(cookie.slice(ACCOUNT_COOKIE.length + 1)) : null;
+};
+
 const requireParentAuth = (req, res, next) => {
-  const token = req.get('Authorization')?.replace(/^Bearer\s+/i, '');
+  const token = getToken(req);
   if (!token || !getSecret()) {
     return res.status(401).json({
       error: 'PARENT_AUTH_REQUIRED',
@@ -42,8 +64,9 @@ const requireParentAuth = (req, res, next) => {
     });
   }
 
+  let parsed;
   try {
-    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (parsed.role !== 'parent' || parsed.expiresAt <= Date.now()) {
       throw new Error('Expired parent token');
     }
@@ -54,10 +77,54 @@ const requireParentAuth = (req, res, next) => {
     });
   }
 
+  if (process.env.NODE_ENV === 'production' && !parsed.parentId) {
+    return res.status(401).json({
+      error: 'PARENT_AUTH_REQUIRED',
+      message: 'Parent access is required.',
+    });
+  }
+
+  if (parsed.role !== 'parent') {
+    return res.status(401).json({
+      error: 'PARENT_AUTH_REQUIRED',
+      message: 'Parent access is required.',
+    });
+  }
+
+  req.parentId = parsed.parentId || null;
   return next();
 };
 
+const optionalParentAuth = (req, res, next) => {
+  const token = getToken(req);
+  if (!token) return next();
+  if (!getSecret()) return requireParentAuth(req, res, next);
+
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature || !hasMatchingSignature(signature, sign(payload))) {
+    return requireParentAuth(req, res, next);
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (parsed.expiresAt <= Date.now()) return requireParentAuth(req, res, next);
+    if (parsed.role === 'child' && parsed.parentId && Object.hasOwn(parsed, 'childProfileId')) {
+      req.parentId = parsed.parentId;
+      req.childProfileId = parsed.childProfileId;
+      req.childSession = true;
+      return next();
+    }
+  } catch (error) {
+    return requireParentAuth(req, res, next);
+  }
+
+  return requireParentAuth(req, res, next);
+};
+
 module.exports = {
+  ACCOUNT_COOKIE,
+  createChildToken,
   createParentToken,
   requireParentAuth,
+  optionalParentAuth,
 };

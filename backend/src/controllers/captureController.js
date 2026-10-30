@@ -1,10 +1,11 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const InteractionLog = require('../models/InteractionLog');
+const { requestWithRetry } = require('../services/aiServiceClient');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
-const saveInteraction = async (data) => {
+const saveInteraction = async (data, language = 'english', parentId = null, childProfileId = null) => {
   const outcome = data.is_safe === false
     ? 'unsafe'
     : data.identified
@@ -12,8 +13,10 @@ const saveInteraction = async (data) => {
       : 'unidentified';
 
   await InteractionLog.create({
+    parentId,
+    childProfileId,
     outcome,
-    language: data.language || req.body.language || 'english',
+    language: data.language || language,
     objectName: data.object_name,
     kidSummary: data.kid_summary,
     funFact: data.fun_fact,
@@ -32,6 +35,7 @@ const saveInteraction = async (data) => {
     confidenceNote: data.confidence_note,
     possibleObjects: data.possible_objects || [],
     needsClearerImage: data.needs_clearer_image || false,
+    ...(data.identified ? { review: { intervalDays: 1, dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } } : {}),
   });
 };
 
@@ -44,19 +48,22 @@ const handlePhotoUpload = async (req, res) => {
       });
     }
 
-    const form = new FormData();
-    form.append('file', req.file.buffer, {
-      filename: req.file.originalname || 'capture.jpg',
-      contentType: req.file.mimetype,
-    });
-    form.append('language', req.body.language || 'english');
-
-    const aiResponse = await axios.post(`${AI_SERVICE_URL}/api/vision/recognize`, form, {
-      headers: {
-        ...form.getHeaders(),
-        'x-kinderlens-language': req.body.language || 'english',
-      },
-      timeout: 15000,
+    const aiResponse = await requestWithRetry(() => {
+      const form = new FormData();
+      form.append('file', req.file.buffer, {
+        filename: req.file.originalname || 'capture.jpg',
+        contentType: req.file.mimetype,
+      });
+      form.append('language', req.body.language || 'english');
+      return axios.post(`${AI_SERVICE_URL}/api/vision/recognize`, form, {
+        headers: {
+          ...form.getHeaders(),
+          'x-kinderlens-language': req.body.language || 'english',
+        },
+        timeout: 15000,
+      });
+    }, {
+      onRetry: ({ attempt, delay }) => console.warn(`Retrying vision request (${attempt}) after ${delay}ms`),
     });
 
     const data = aiResponse.data;
@@ -69,7 +76,12 @@ const handlePhotoUpload = async (req, res) => {
       });
     }
 
-    await saveInteraction(data);
+    await saveInteraction(
+      data,
+      req.body.language || 'english',
+      req.parentId,
+      req.childProfileId
+    );
 
     // Safety gate triggered
     if (!data.is_safe) {

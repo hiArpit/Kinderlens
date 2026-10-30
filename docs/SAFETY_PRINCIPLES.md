@@ -16,3 +16,9 @@
    through the protected Parent Dashboard.
 8. **Failures are explicit.** Service, grounding, and validation failures must
    show a friendly recovery message and must not become invented content.
+9. **Parent data controls are explicit.** History export and deletion require
+   parent authentication and destructive actions require confirmation.
+10. **Account boundaries are explicit.** Account-authenticated history is scoped
+    to the signed parent identity, and child profiles belong to that parent.
+11. **Abuse controls protect availability.** Authentication and AI-backed
+     endpoints use request limits, while oversized JSON requests are rejected.

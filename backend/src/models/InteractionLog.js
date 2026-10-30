@@ -2,6 +2,18 @@ const mongoose = require('mongoose');
 
 const interactionLogSchema = new mongoose.Schema(
   {
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Parent',
+      default: null,
+      index: true,
+    },
+    childProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ChildProfile',
+      default: null,
+      index: true,
+    },
     outcome: {
       type: String,
       enum: ['identified', 'unidentified', 'unsafe', 'quiz', 'story'],
@@ -93,6 +105,15 @@ const interactionLogSchema = new mongoose.Schema(
         type: Number,
         default: null,
       },
+      reviewObjects: {
+        type: [String],
+        default: [],
+      },
+    },
+    review: {
+      intervalDays: { type: Number, default: 1 },
+      dueAt: { type: Date, default: null, index: true },
+      lastReviewedAt: { type: Date, default: null },
     },
     story: {
       title: {

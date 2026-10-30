@@ -1,169 +1,316 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import './App.css';
 import PhotoCapture from './components/Capture/PhotoCapture';
 import ParentDashboard from './components/Parent/ParentDashboard';
 import WonderList from './components/WonderList/WonderList';
 import Quiz from './components/Quiz/Quiz';
 import Story from './components/Story/Story';
 import VocabularyText from './components/Vocabulary/VocabularyText';
+import DiscoveryMap from './components/DiscoveryMap/DiscoveryMap';
+import WelcomeGuide from './components/WelcomeGuide/WelcomeGuide';
+import WorldExplorer from './components/WorldExplorer/WorldExplorer';
+
+const WELCOME_GUIDE_KEY = 'kinderlens_welcome_guide_seen';
 
 export default function App() {
   const [result, setResult] = useState(null);
   const [showParentDashboard, setShowParentDashboard] = useState(false);
+  const [welcomeGuideOpen, setWelcomeGuideOpen] = useState(
+    () => localStorage.getItem(WELCOME_GUIDE_KEY) !== 'true'
+  );
+  const [welcomeGuideStep, setWelcomeGuideStep] = useState(0);
   const [language, setLanguage] = useState('english');
+  const [profiles, setProfiles] = useState([]);
+  const [childProfileId, setChildProfileId] = useState(
+    () => localStorage.getItem('kinderlens_child_profile') || ''
+  );
+  const [childSessionActive, setChildSessionActive] = useState(
+    () => Boolean(sessionStorage.getItem('kinderlens_child_session'))
+  );
+  const [childSessionName, setChildSessionName] = useState(
+    () => sessionStorage.getItem('kinderlens_child_session_name') || ''
+  );
+  const lastChildActivity = useRef(Date.now());
 
-  const handleUploadSuccess = (data) => {
-    setResult(data);
+  useEffect(() => {
+    fetch('/api/account/profiles', { credentials: 'include' })
+      .then((response) => {
+        if (response.ok) return response.json();
+        if ([401, 403].includes(response.status) && !sessionStorage.getItem('kinderlens_child_session')) {
+          setProfiles([]);
+          localStorage.removeItem('kinderlens_child_profile');
+          setChildProfileId('');
+        }
+        return null;
+      })
+      .then((data) => {
+        if (!data?.profiles) return;
+        setProfiles(data.profiles);
+        if (!data.profiles.some((profile) => profile._id === childProfileId)) {
+          setChildProfileId(data.profiles[0]?._id || '');
+        }
+      })
+      .catch(() => {});
+  }, [childProfileId, showParentDashboard]);
+
+  useEffect(() => {
+    setChildSessionActive(Boolean(sessionStorage.getItem('kinderlens_child_session')));
+    setChildSessionName(sessionStorage.getItem('kinderlens_child_session_name') || '');
+  }, [showParentDashboard]);
+
+  const endChildSession = () => {
+    sessionStorage.removeItem('kinderlens_child_session');
+    sessionStorage.removeItem('kinderlens_child_session_name');
+    localStorage.removeItem('kinderlens_child_profile');
+    setChildSessionActive(false);
+    setChildSessionName('');
+    setChildProfileId('');
+    setProfiles([]);
   };
 
-  const handleReset = () => {
+  useEffect(() => {
+    if (!childSessionActive) return undefined;
+    lastChildActivity.current = Date.now();
+    let refreshing = false;
+    const markActive = () => { lastChildActivity.current = Date.now(); };
+    const markVisible = () => {
+      if (document.visibilityState === 'visible') markActive();
+    };
+    const activityEvents = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'click'];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, markActive, { passive: true }));
+    document.addEventListener('visibilitychange', markVisible);
+
+    const refreshTimer = window.setInterval(async () => {
+      const recentlyActive = Date.now() - lastChildActivity.current < 2 * 60 * 1000;
+      const token = sessionStorage.getItem('kinderlens_child_session');
+      if (!recentlyActive || !token || refreshing) return;
+      refreshing = true;
+      try {
+        const response = await fetch('/api/account/child-session/refresh', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (response.ok && data.token) sessionStorage.setItem('kinderlens_child_session', data.token);
+        else if (response.status === 401) {
+          sessionStorage.removeItem('kinderlens_child_session');
+          sessionStorage.removeItem('kinderlens_child_session_name');
+          setChildSessionActive(false);
+          setChildSessionName('');
+          localStorage.removeItem('kinderlens_child_profile');
+          setChildProfileId('');
+          setProfiles([]);
+        }
+      } catch {
+        // Keep the current token; the next active heartbeat can retry.
+      } finally {
+        refreshing = false;
+      }
+    }, 60 * 1000);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, markActive));
+      document.removeEventListener('visibilitychange', markVisible);
+    };
+  }, [childSessionActive]);
+
+  const handleProfileChange = (event) => {
+    const nextId = event.target.value;
+    setChildProfileId(nextId);
+    if (nextId) localStorage.setItem('kinderlens_child_profile', nextId);
+    else localStorage.removeItem('kinderlens_child_profile');
+  };
+
+  const goHome = () => {
     setResult(null);
+    setShowParentDashboard(false);
   };
+
+  const dismissWelcomeGuide = useCallback(() => {
+    localStorage.setItem(WELCOME_GUIDE_KEY, 'true');
+    setWelcomeGuideOpen(false);
+  }, []);
+
+  const advanceWelcomeGuide = useCallback(() => {
+    if (welcomeGuideStep >= 2) {
+      dismissWelcomeGuide();
+      return;
+    }
+    setWelcomeGuideStep((step) => step + 1);
+  }, [welcomeGuideStep, dismissWelcomeGuide]);
 
   if (showParentDashboard) {
     return (
-      <main style={{ minHeight: '100vh', padding: '1.5rem' }}>
-        <ParentDashboard onClose={() => setShowParentDashboard(false)} />
+      <main className="app-shell">
+        <div className="app-content">
+          <ParentDashboard childProfileId={childProfileId} onClose={() => setShowParentDashboard(false)} />
+        </div>
       </main>
     );
   }
 
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem' }}>
-      <header style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '2.5rem', color: '#1e3a8a', margin: 0 }}>🔍 KinderLens</h1>
-        <p style={{ fontSize: '1.1rem', color: '#4b5563', margin: '0.25rem 0 0 0' }}>
-          Point, snap, and discover!
-        </p>
-        <button
-          type="button"
-          onClick={() => setShowParentDashboard(true)}
-          style={{ background: 'none', border: 0, color: '#475569', cursor: 'pointer', marginTop: '0.75rem' }}
-        >
-          Parent area
-        </button>
-      </header>
-
-      {!result ? (
-        <>
-          <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-            <label htmlFor="language-select" style={{ color: '#1e3a8a', fontWeight: 700, marginRight: '0.5rem' }}>
-              Language
-            </label>
-            <select
-              id="language-select"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
-              style={{ border: '1px solid #93c5fd', borderRadius: '8px', padding: '0.45rem', color: '#1e3a8a' }}
-            >
-              <option value="english">English</option>
-              <option value="hindi">हिंदी</option>
-              <option value="hinglish">Hinglish</option>
-            </select>
+    <main className="app-shell">
+      <header className="app-header">
+        <button type="button" className="brand brand-home" aria-label="Go to KinderLens home" onClick={goHome}>
+          <span className="brand-mark" aria-hidden="true">🔍</span>
+          <div>
+            <h1>KinderLens</h1>
+            <p>Small questions. Big discoveries.</p>
           </div>
-          <WonderList onExplore={handleUploadSuccess} language={language} />
-          <Quiz review />
-          <PhotoCapture onUploadSuccess={handleUploadSuccess} language={language} />
-        </>
-      ) : (
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '24px',
-          padding: '2rem',
-          maxWidth: '520px',
-          width: '100%',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem'
-        }}>
-          {result.identified ? (
-            <>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '3.5rem', lineHeight: '1' }}>✨</div>
-                <h2 style={{ color: '#1e3a8a', margin: '0.5rem 0 0 0', textTransform: 'capitalize', fontSize: '1.8rem' }}>
-                  {result.objectName}
-                </h2>
-              </div>
-
-              {/* Kid-Calibrated Summary */}
-              <div style={{ backgroundColor: '#eff6ff', borderRadius: '16px', padding: '1rem' }}>
-                <p style={{ color: '#1e40af', fontSize: '1.15rem', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>
-                  <VocabularyText text={result.kidSummary} vocabulary={result.vocabulary} />
-                </p>
-              </div>
-
-              {/* Fun Fact Badge */}
-              {result.funFact && (
-                <div style={{ backgroundColor: '#fef3c7', borderRadius: '16px', padding: '1rem' }}>
-                  <span style={{ fontWeight: 700, color: '#92400e', display: 'block', marginBottom: '0.25rem', fontSize: '0.95rem' }}>
-                    🌟 Fun Fact:
-                  </span>
-                  <p style={{ color: '#78350f', fontSize: '1.05rem', margin: 0, lineHeight: '1.4' }}>
-                    <VocabularyText text={result.funFact} vocabulary={result.vocabulary} />
-                  </p>
-                </div>
-              )}
-
-              {/* Action Prompt */}
-              {result.actionPrompt && (
-                <div style={{ backgroundColor: '#ecfdf5', borderRadius: '16px', padding: '1rem' }}>
-                  <span style={{ fontWeight: 700, color: '#065f46', display: 'block', marginBottom: '0.25rem', fontSize: '0.95rem' }}>
-                    👀 Try This:
-                  </span>
-                  <p style={{ color: '#047857', fontSize: '1.05rem', margin: 0, lineHeight: '1.4' }}>
-                    {result.actionPrompt}
-                  </p>
-                </div>
-              )}
-
-              {/* Grounding Source & Reading Level Footer */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', fontSize: '0.8rem', color: '#6b7280' }}>
-                {result.grounding?.grounded ? (
-                  <span style={{ color: '#059669', fontWeight: 600 }}>
-                    📖 Verified via {result.grounding.source_title}
-                  </span>
-                ) : (
-                  <span>🔍 Direct observation</span>
-                )}
-
-                {result.readability && (
-                  <span>Reading: Grade {result.readability.grade_level}</span>
-                )}
-              </div>
-              <Quiz objectName={result.objectName} />
-              <Story objectName={result.objectName} language={result.language || language} />
-            </>
-          ) : (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '3.5rem' }}>{result.isSafe === false ? '🛡️' : '🔍❓'}</div>
-              <h2 style={{ color: result.isSafe === false ? '#dc2626' : '#d97706', margin: '0.5rem 0' }}>
-                {result.isSafe === false ? 'Adult Item' : 'Not Quite Sure!'}
-              </h2>
-              <p style={{ color: '#4b5563', fontSize: '1.05rem', lineHeight: '1.4', margin: '0 0 1rem 0' }}>
-                {result.message}
-              </p>
-            </div>
-          )}
-
+        </button>
+        <div className="header-actions">
           <button
-            onClick={handleReset}
-            style={{
-              marginTop: '0.5rem',
-              backgroundColor: '#3b82f6',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '16px',
-              padding: '0.85rem 1.75rem',
-              fontSize: '1.15rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              alignSelf: 'center'
-            }}
+            type="button"
+            className="help-link"
+            onClick={() => { setWelcomeGuideStep(0); setWelcomeGuideOpen(true); }}
           >
-            📸 Snap Another
+            How to play
+          </button>
+          <button type="button" className="parent-link" aria-label="Parent area" onClick={() => setShowParentDashboard(true)}>
+            Parent area
           </button>
         </div>
+      </header>
+
+      <div className="app-content">
+        {!result ? (
+          <>
+            <section className="hero">
+              <h2>What will we discover today?</h2>
+              <p>Take a picture or choose a wonder. We&apos;ll turn curiosity into a learning adventure.</p>
+              <a className="hero-world-link" href="#world-explorer">
+                {language === 'hindi' ? 'दुनिया का नक्शा देखो ↓' : language === 'hinglish' ? 'Duniya explore karo ↓' : 'Explore the world ↓'}
+              </a>
+            </section>
+
+            <div className="toolbar">
+              <label htmlFor="language-select">
+                Learning language
+                <select id="language-select" value={language} onChange={(event) => setLanguage(event.target.value)}>
+                  <option value="english">English</option>
+                  <option value="hindi">हिंदी</option>
+                  <option value="hinglish">Hinglish</option>
+                </select>
+              </label>
+              {childSessionActive ? (
+                <>
+                  <span className="profile-note">
+                    Learning for {childSessionName || 'your saved discoveries'}
+                  </span>
+                  <button type="button" className="end-child-session" onClick={endChildSession}>
+                    End learning session
+                  </button>
+                </>
+              ) : profiles.length > 0 ? (
+                <label htmlFor="child-profile-select">
+                  Learning for
+                  <select id="child-profile-select" value={childProfileId} onChange={handleProfileChange} disabled={childSessionActive}>
+                    {profiles.map((profile) => (
+                      <option key={profile._id} value={profile._id}>{profile.name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <span className="profile-note">Ask a grown-up to save your discoveries</span>
+              )}
+            </div>
+
+            {profiles.length === 0 && (
+              <div className="setup-banner">
+                <strong>Ready to start your learning trail?</strong>
+                <p>A grown-up can set up a profile so your discoveries and quiz scores stay together.</p>
+                <button type="button" onClick={() => setShowParentDashboard(true)}>Set up a profile</button>
+              </div>
+            )}
+
+            <div className="discovery-workspace">
+              <section className="capture-card">
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">Best way to begin</span>
+                    <h2>Look through your lens</h2>
+                    <p>Point at one interesting thing and let&apos;s explore it together.</p>
+                  </div>
+                  <span className="section-icon" aria-hidden="true">📸</span>
+                </div>
+                <PhotoCapture onUploadSuccess={setResult} language={language} childProfileId={childProfileId} />
+              </section>
+              <DiscoveryMap />
+            </div>
+            <WorldExplorer language={language} />
+            <div className="learning-section">
+              <WonderList onExplore={setResult} language={language} childProfileId={childProfileId} />
+              <Quiz review language={language} childProfileId={childProfileId} />
+            </div>
+          </>
+        ) : (
+          <DiscoveryResult
+            result={result}
+            language={language}
+            childProfileId={childProfileId}
+            onReset={() => setResult(null)}
+          />
+        )}
+      </div>
+      {welcomeGuideOpen && (
+        <WelcomeGuide
+          step={welcomeGuideStep}
+          onNext={advanceWelcomeGuide}
+          onBack={() => setWelcomeGuideStep((step) => Math.max(0, step - 1))}
+          onDismiss={dismissWelcomeGuide}
+        />
       )}
     </main>
+  );
+}
+
+function DiscoveryResult({ result, language, childProfileId, onReset }) {
+  if (!result.identified) {
+    return (
+      <div className="result-card">
+        <div className="result-heading">
+          <div className="result-heading-icon">{result.isSafe === false ? '🛡️' : '🔍❓'}</div>
+          <h2>{result.isSafe === false ? 'Adult item' : 'Not quite sure!'}</h2>
+          <p>{result.message}</p>
+        </div>
+        <button type="button" className="snap-another" onClick={onReset}>📸 Try another</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="result-card">
+      <div className="result-heading">
+        <div className="result-heading-icon">✨</div>
+        <h2>{result.objectName}</h2>
+      </div>
+      <div className="result-panel summary">
+        <strong>What is it?</strong>
+        <p><VocabularyText text={result.kidSummary} vocabulary={result.vocabulary} /></p>
+      </div>
+      {result.funFact && (
+        <div className="result-panel fact">
+          <strong>🌟 Fun fact</strong>
+          <p><VocabularyText text={result.funFact} vocabulary={result.vocabulary} /></p>
+        </div>
+      )}
+      {result.actionPrompt && (
+        <div className="result-panel action">
+          <strong>👀 Try this</strong>
+          <p>{result.actionPrompt}</p>
+        </div>
+      )}
+      <div className="result-meta">
+        <span>{result.grounding?.grounded ? `📖 ${result.grounding.source_title}` : '🔍 Direct observation'}</span>
+        {result.readability && <span>Grade {result.readability.grade_level}</span>}
+      </div>
+      <DiscoveryMap objectName={result.objectName} onReset={onReset} />
+      <Quiz objectName={result.objectName} language={result.language || language} childProfileId={childProfileId} />
+      <Story objectName={result.objectName} language={result.language || language} childProfileId={childProfileId} />
+      <button type="button" className="snap-another" onClick={onReset}>📸 Snap another</button>
+    </div>
   );
 }

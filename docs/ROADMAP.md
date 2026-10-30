@@ -40,3 +40,98 @@ Before merging `develop` into `main`, manually verify:
 - Add rate limiting, secure deployment, and stronger session controls.
 - Add deletion/export controls and privacy review.
 - Expand automated end-to-end and adversarial evaluation coverage.
+
+## Evaluation harness
+
+Run the seeded AI-service evaluations with:
+
+```bash
+python evaluation/run_evals.py
+```
+
+Use `--strict` to treat any skipped case as a failure. The adversarial image
+cases use the checked-in fixtures under `evaluation/test_cases/fixtures`.
+
+## Backend smoke tests
+
+Run the dependency-light backend route checks with:
+
+```bash
+cd backend
+npm test
+```
+
+These checks cover health, capture validation, quiz/story request validation,
+parent authorization, and signed parent-token handling without requiring a
+running AI service or MongoDB instance.
+
+## Privacy controls
+
+Parent-authenticated history now supports JSON export, deletion of one entry,
+and deletion of all entries. The dashboard confirms destructive actions before
+making the request.
+
+## Parent accounts
+
+Local parent accounts now support password hashing, signed HttpOnly session
+cookies, and protected child-profile creation/listing endpoints. The shared
+PIN remains available only during local development. Production disables shared
+PIN login and requires parent accounts.
+
+Activity requests can now carry a selected child profile. The backend verifies
+that the profile belongs to the signed-in parent before saving captures,
+Wonder List explorations, quizzes, or stories.
+
+## Reliability hardening
+
+The backend now applies bounded JSON request sizes, rate limits to parent
+authentication and AI-backed routes, retry guidance for throttled requests,
+and non-cacheable responses for account and PIN authentication.
+
+AI-backed backend routes now retry transient timeouts, connection resets, and
+5xx/429 responses with bounded exponential backoff. Permanent validation
+failures are returned immediately.
+
+## Browser smoke tests
+
+Run the deterministic frontend smoke tests with:
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
+The tests mock backend responses and cover the child-facing entry screen,
+parent-area separation, account setup, and child-profile creation controls.
+
+## Discovery Map and visual foundation
+
+The child-facing experience includes a warm explorer visual foundation and a
+deterministic Discovery Map. That map connects the current object to
+child-friendly learning ideas such as space, weather, fossils, activities, and
+questions. The separate Review experience shows saved objects from the selected
+child profile and connects them when their grounded explanations share terms.
+Review quizzes can be started early; missed reviews are available to catch up.
+
+World Explorer combines curated geological and fossil discoveries with live
+GBIF bird, animal, and plant observations. Bird pins use licensed thumbnails
+when available, and common names come from GBIF's vernacular-name records.
+Sightings use rounded map areas; selected species are enriched with a short
+Wikipedia summary and source links. The map keeps curated entries as a fallback
+if public data services are unavailable. The interface supports English, Hindi,
+and Hinglish.
+
+## Production API configuration
+
+The backend accepts credentialed browser requests only from `FRONTEND_ORIGIN`
+(comma-separated for multiple deployments) plus the local development origins.
+Set `NODE_ENV=production` to enable Secure account cookies, and set
+`TRUST_PROXY=true` only when the API is behind a trusted reverse proxy so
+rate-limit client IPs are resolved correctly. Use the variables documented in
+`backend/.env.example` for deployment configuration.
+
+## Deployment readiness
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for the same-origin HTTPS deployment
+contract, production environment requirements, startup validation, and the
+Android/iPhone camera checklist.

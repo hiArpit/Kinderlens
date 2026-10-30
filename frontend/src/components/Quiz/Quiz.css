@@ -1,7 +1,11 @@
 .quiz-card {
-  background: #f5f3ff;
-  border-radius: 16px;
-  padding: 1rem;
+  align-self: start;
+  background: linear-gradient(145deg, #f5f3ff, #fbfaff);
+  border: 1px solid #ddd6fe;
+  border-radius: 20px;
+  box-shadow: 0 10px 24px rgba(91, 33, 182, 0.08);
+  padding: 1.1rem;
+  width: 100%;
 }
 
 .quiz-heading {
@@ -47,6 +51,10 @@
   margin-top: 0.75rem;
 }
 
+.quiz-start .quiz-primary-button {
+  min-width: 10rem;
+}
+
 .quiz-start label {
   color: #4c1d95;
   font-weight: 700;
@@ -64,14 +72,33 @@
   margin-top: 0;
 }
 
+.quiz-start-review {
+  display: grid;
+  grid-template-columns: max-content minmax(9rem, 12rem) minmax(12rem, max-content);
+}
+
+.quiz-start-review .review-due-note {
+  grid-column: 1 / -1;
+  margin-bottom: 0.25rem;
+}
+
 .quiz-primary-button {
   background: #7c3aed;
   color: #fff;
 }
 
+.quiz-primary-button:hover,
+.quiz-secondary-button:hover {
+  box-shadow: 0 8px 16px rgba(124, 58, 237, 0.22);
+}
+
 .quiz-primary-button:disabled {
-  cursor: wait;
-  opacity: 0.7;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.quiz-primary-button.is-loading:disabled {
+  cursor: progress;
 }
 
 .quiz-secondary-button {
@@ -100,6 +127,11 @@
   padding: 0.55rem;
 }
 
+.quiz-question label:hover {
+  background: #f5f3ff;
+  box-shadow: 0 2px 8px rgba(91, 33, 182, 0.1);
+}
+
 .quiz-question input {
   margin-right: 0.5rem;
 }
@@ -126,6 +158,16 @@
 
 .quiz-review h4 {
   margin: 0 0 0.5rem;
+}
+
+.review-due-note {
+  margin: 0 0 0.75rem;
+  color: #365b4a;
+  font-weight: 600;
+}
+
+.review-next-date {
+  margin-top: 0.9rem;
 }
 
 .quiz-feedback {
@@ -162,4 +204,34 @@
 
 .incorrect-label {
   color: #b45309;
+}
+
+@media (max-width: 520px) {
+  .quiz-card {
+    border-radius: 18px;
+    padding: 0.9rem;
+  }
+
+  .quiz-start {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quiz-start-review {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-start-review .review-due-note {
+    grid-column: 1;
+  }
+
+  .quiz-start label,
+  .quiz-start select,
+  .quiz-start .quiz-primary-button {
+    width: 100%;
+  }
+
+  .quiz-start select {
+    margin-top: 0.2rem;
+  }
 }

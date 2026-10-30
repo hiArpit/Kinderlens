@@ -1,9 +1,13 @@
 const express = require('express');
 const axios = require('axios');
 const InteractionLog = require('../models/InteractionLog');
+const { optionalParentAuth } = require('../middlewares/parentAuth');
+const { resolveChildProfile } = require('../middlewares/childProfile');
+const { requestWithRetry } = require('../services/aiServiceClient');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const router = express.Router();
+router.use(optionalParentAuth, resolveChildProfile);
 
 router.post('/', async (req, res) => {
   const objectName = typeof req.body?.object_name === 'string'
@@ -18,11 +22,11 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const aiResponse = await axios.post(
+    const aiResponse = await requestWithRetry(() => axios.post(
       `${AI_SERVICE_URL}/api/story`,
       { object_name: objectName, language: req.body.language || 'english' },
       { timeout: 20000 }
-    );
+    ));
     const data = aiResponse.data;
 
     if (!data.success) {
@@ -43,6 +47,8 @@ router.post('/', async (req, res) => {
     const historyEntry = await InteractionLog.create({
       outcome: 'story',
       activityType: 'story',
+      parentId: req.parentId,
+      childProfileId: req.childProfileId,
       language: data.language || req.body.language || 'english',
       objectName: data.object_name,
       grounding: {

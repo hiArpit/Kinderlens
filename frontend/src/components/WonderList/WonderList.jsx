@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import './WonderList.css';
+import { childSessionHeaders, hasChildSession } from '../../childSession';
+
+const LOAD_WONDERS_MESSAGE = 'I couldn’t load the Wonder List just now. Please try again soon.';
+const EXPLORE_WONDER_MESSAGE = 'I couldn’t explore that just now. Please try again in a little bit.';
 
 async function readJsonResponse(response, fallbackMessage) {
   const body = await response.text();
   if (!body.trim()) {
+    console.error('Wonder List API returned an empty response.', { status: response.status });
     throw new Error(fallbackMessage);
   }
 
   try {
     return JSON.parse(body);
-  } catch {
+  } catch (error) {
+    console.error('Wonder List API returned invalid JSON.', { status: response.status, error });
     throw new Error(fallbackMessage);
   }
 }
 
-export default function WonderList({ onExplore, language = 'english' }) {
+export default function WonderList({ onExplore, language = 'english', childProfileId = '' }) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [loadingSlug, setLoadingSlug] = useState('');
@@ -22,11 +28,17 @@ export default function WonderList({ onExplore, language = 'english' }) {
   useEffect(() => {
     fetch('/api/wonder-list')
       .then(async (response) => {
-        const data = await readJsonResponse(response, 'Discoveries are still loading. Please try again.');
-        if (!response.ok) throw new Error(data.message || 'Could not load discoveries.');
+        const data = await readJsonResponse(response, LOAD_WONDERS_MESSAGE);
+        if (!response.ok) {
+          console.error('Wonder List request failed.', { status: response.status, message: data.message });
+          throw new Error(LOAD_WONDERS_MESSAGE);
+        }
         setItems(data.items || []);
       })
-      .catch((loadError) => setError(loadError.message));
+      .catch((loadError) => {
+        console.error('Could not load Wonder List.', loadError);
+        setError(LOAD_WONDERS_MESSAGE);
+      });
   }, []);
 
   const explore = async (item) => {
@@ -35,17 +47,22 @@ export default function WonderList({ onExplore, language = 'english' }) {
     try {
       const response = await fetch(`/api/wonder-list/${item.slug}/explore`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language }),
+        credentials: 'include',
+        headers: childSessionHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          language,
+          ...(!hasChildSession() && childProfileId ? { child_profile_id: childProfileId } : {}),
+        }),
       });
-      const data = await readJsonResponse(
-        response,
-        'This discovery is still loading. Please restart the backend and try again.'
-      );
-      if (!response.ok) throw new Error(data.message || 'Could not explore this item.');
+      const data = await readJsonResponse(response, EXPLORE_WONDER_MESSAGE);
+      if (!response.ok || !data.success || data.available === false) {
+        console.error('Wonder item exploration failed.', { status: response.status, message: data.message });
+        throw new Error(EXPLORE_WONDER_MESSAGE);
+      }
       onExplore(data);
     } catch (exploreError) {
-      setError(exploreError.message);
+      console.error('Could not explore Wonder List item.', exploreError);
+      setError(EXPLORE_WONDER_MESSAGE);
     } finally {
       setLoadingSlug('');
     }
