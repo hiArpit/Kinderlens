@@ -7,18 +7,35 @@ Parents can manage child profiles and saved learning activity.
 
 ## See it in action
 
-These screenshots were captured from the running frontend. World Explorer
-records and images can change as its public data sources update.
+These screenshots were captured from the running frontend, illustrating the end-to-end exploratory learning workflow:
 
-### Home and discovery workspace
+### 1. Live Camera Capture
+Hold any everyday object in front of the lens. The camera stream captures the frame with one tap.
+
+![Live Camera Viewfinder capturing a real-world object (book)](docs/screenshots/object-capture-live.png)
+
+### 2. Object Identification & Grounded Learning Card
+KinderLens accurately identifies the object (e.g. *Book*), produces a 3-sentence verified explanation, an engaging fun fact, a physical observation task, and an automated readability score.
+
+![Object Identification card identifying "Book" with child explanation, fun fact, observation task, and readability grade](docs/screenshots/object-identification-detail.png)
+
+### 3. Discovery Map Concept Graph & Quiz
+Follow a multi-stage cognitive branch from the discovered object into connected scientific domains (e.g. *Telescope* connecting to *Science*, *Space*, and *Stars*), and launch an instant interactive quiz.
+
+![Discovery Map graph branching from Telescope into Science, Space, and Stars, with Quick Quiz launcher](docs/screenshots/discovery-map-graph.png)
+
+### 4. Parent Profile Control & Learning Journal
+Parents can switch between child profiles, review weekly learning metrics (objects explored, quizzes taken, safety flags), inspect timestamped discovery logs, and manage privacy settings.
+
+![Parent View Learning Journal showing child profile selector, explored objects count, interaction metrics, and safety flags](docs/screenshots/parent-learning-journal.png)
+
+### 5. Home and Discovery Workspace
 
 ![KinderLens home screen with camera capture, language selection, and Discovery Map](docs/screenshots/home-desktop.png)
 
-### World Explorer on desktop
+### 6. World Explorer (Desktop & Mobile)
 
 ![World Explorer with category filters, map pins, and zoom controls](docs/screenshots/world-explorer-desktop.png)
-
-### World Explorer on mobile
 
 ![Mobile World Explorer with a selected Mount Everest discovery card, photo, description, and source](docs/screenshots/world-explorer-mobile.png)
 
