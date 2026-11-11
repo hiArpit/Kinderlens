@@ -281,3 +281,14 @@ docs/             Safety principles, roadmap, and deployment notes
 
 See [the roadmap](docs/ROADMAP.md) and [deployment guidance](docs/DEPLOYMENT.md)
 for more detail.
+
+
+## Development Team
+
+KinderLens is a collaborative project developed using AI,
+backend, and frontend technologies.
+
+## Project Documentation
+
+Refer to the docs folder for additional project documentation
+and implementation details.
